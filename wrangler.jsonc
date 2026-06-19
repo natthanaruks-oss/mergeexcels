@@ -1,9 +1,5 @@
-{
-  "$schema": "./node_modules/wrangler/config-schema.json",
-  "name": "mergeexcels",
-  "compatibility_date": "2026-06-19",
-  "assets": {
-    "directory": "./public",
-    "not_found_handling": "single-page-application"
-  }
-}
+node_modules/
+.wrangler/
+.dev.vars
+*.log
+.DS_Store

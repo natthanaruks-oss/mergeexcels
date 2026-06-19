@@ -1,12 +1,19 @@
-{
-  "name": "mergeexcels",
-  "version": "1.0.0",
-  "private": true,
-  "scripts": {
-    "deploy": "wrangler deploy",
-    "dev": "wrangler dev"
-  },
-  "devDependencies": {
-    "wrangler": "4.102.0"
-  }
-}
+import { copyFile, mkdir } from "node:fs/promises";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const here = dirname(fileURLToPath(import.meta.url));
+const root = resolve(here, "..");
+const vendorDir = resolve(root, "public", "vendor");
+
+await mkdir(vendorDir, { recursive: true });
+await copyFile(
+  resolve(root, "node_modules", "xlsx", "dist", "xlsx.full.min.js"),
+  resolve(vendorDir, "xlsx.full.min.js")
+);
+await copyFile(
+  resolve(root, "node_modules", "jszip", "dist", "jszip.min.js"),
+  resolve(vendorDir, "jszip.min.js")
+);
+
+console.log("Vendor browser libraries copied to public/vendor.");
