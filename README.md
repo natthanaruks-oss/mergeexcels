@@ -1,40 +1,46 @@
-const assert = require("node:assert/strict");
-const XLSX = require("xlsx");
-const ExcelOps = require("../public/excel-ops.js");
+# MergeExcels v3 — Excel & PDF Toolkit
 
-function workbook(sheets) {
-  const wb = XLSX.utils.book_new();
-  for (const [name, data] of Object.entries(sheets)) {
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(data), name);
-  }
-  return wb;
-}
+เครื่องมือรวม / ต่อ / แยกไฟล์ Excel และ PDF ที่ประมวลผลในเบราว์เซอร์ทั้งหมด
+(ไฟล์ไม่ถูกอัปโหลดขึ้นเซิร์ฟเวอร์) ทำงานบน Cloudflare Workers Static Assets
 
-const inputA = {
-  name: "North.xlsx",
-  workbook: workbook({ Sales: [["ID", "Amount"], [1, 100]], Summary: [["ID", "Amount"], [99, 100]] }),
-};
-const inputB = {
-  name: "South.xlsx",
-  workbook: workbook({ Sales: [["ID", "Amount"], [2, 200]], Extra: [["ID", "Note"], [3, "OK"]] }),
-};
+## โครงสร้างโปรเจกต์
+```
+public/            ← static assets ที่ deploy จริง
+  index.html
+  app.js · excel-ops.js · pdf-ops.js · styles.css
+  _headers         ← security headers (CSP)
+  vendor/          ← ไลบรารี (committed ไว้แล้ว ไม่ต้อง build)
+wrangler.jsonc     ← config (name = mergeexcels)
+package.json · package-lock.json
+.node-version      ← ปักหมุด Node 20 (จำเป็นสำหรับ wrangler 4.x)
+```
 
-const merged = ExcelOps.mergeWorkbooks(XLSX, [inputA, inputB]);
-assert.equal(merged.SheetNames.length, 4);
-assert.equal(new Set(merged.SheetNames.map((x) => x.toLowerCase())).size, 4);
+## Deploy บน Cloudflare (Workers Builds + GitHub)
+1. push โค้ดนี้ขึ้น GitHub repo (เห็น `wrangler.jsonc` + โฟลเดอร์ `public` ที่ root)
+2. Cloudflare Dashboard → **Workers & Pages** → **Create** → **Workers** → **Import a repository**
+3. เลือก repo แล้วตั้งค่า:
 
-const combined = ExcelOps.combineWorkbooks(XLSX, [inputA, inputB], {
-  useHeader: true,
-  addSourceColumns: true,
-});
-const combinedRows = XLSX.utils.sheet_to_json(combined.Sheets["Combined Data"], { header: 1 });
-assert.deepEqual(combinedRows[0], ["Source File", "Source Sheet", "ID", "Amount", "Note"]);
-assert.equal(combinedRows.length, 5);
+| ช่อง | ค่า |
+|---|---|
+| Project name | `mergeexcels` (ต้องตรงกับ wrangler.jsonc) |
+| Build command | *(เว้นว่าง)* |
+| Deploy command | `npx wrangler deploy` |
+| Root directory | `/` |
 
-const split = ExcelOps.splitWorkbook(XLSX, inputA);
-assert.equal(split.length, 2);
-assert.equal(split[0].workbook.SheetNames.length, 1);
-assert.ok(split[0].fileName.endsWith(".xlsx"));
+4. **Create and deploy** → ได้ URL `https://mergeexcels.<subdomain>.workers.dev`
 
-assert.equal(ExcelOps.sanitizeSheetName("A/B*C?D:E"), "A_B_C_D_E");
-console.log("All Excel operation tests passed.");
+> vendor libraries ถูก commit ไว้แล้ว จึงไม่ต้องตั้ง build command
+> ทุกครั้งที่ push เข้า branch `main` Cloudflare จะ deploy อัตโนมัติ
+
+## รันในเครื่อง
+```bash
+npm install
+npm run dev      # http://localhost:8787
+npm test         # รันชุดทดสอบ logic
+```
+
+## อัปเดตไลบรารี vendor (เมื่อต้องการ)
+```bash
+npm install
+npm run vendor   # คัดลอกจาก node_modules → public/vendor
+```
