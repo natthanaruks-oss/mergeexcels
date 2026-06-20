@@ -71,6 +71,19 @@
       dropHint: "แต่ละหน้าจะถูกสร้างเป็น PDF แยกหนึ่งไฟล์",
       unitLabel: "หน้า",
     },
+    pdf2excel: {
+      kind: "pdf",
+      eyebrow: "PDF TO EXCEL",
+      title: "แปลง PDF เป็น Excel",
+      description: "ดึงข้อความตามตำแหน่งแล้วจัดเป็นแถว/คอลัมน์ — เหมาะกับ PDF ที่เป็นข้อความ ไม่ใช่ไฟล์สแกน",
+      button: "เริ่มแปลงเป็น Excel",
+      output: "pdf_to_excel.xlsx",
+      extension: "xlsx",
+      multiple: true,
+      dropTitle: "ลาก PDF มาวาง หรือคลิกเพื่อเลือกไฟล์",
+      dropHint: "เลือกได้หลายไฟล์ · แต่ละหน้าจะกลายเป็น 1 Sheet",
+      unitLabel: "หน้า",
+    },
   };
 
   const state = {
@@ -176,7 +189,7 @@
     els.dropHint.textContent = config.dropHint;
     els.unitLabel.textContent = config.unitLabel;
     els.combineOptions.classList.toggle("hidden", mode !== "combineExcel");
-    document.body.classList.toggle("pdf-mode", config.kind === "pdf");
+    document.body.classList.toggle("pdf-mode", config.kind === "pdf" && mode !== "pdf2excel");
 
     resetFiles();
   }
@@ -539,8 +552,7 @@
     return `รวม ${state.pages.length} หน้าไว้ใน ${outputName}`;
   }
 
-  async function processSplitPdf() {
-    setStatus("กำลังแยกหน้า PDF...", "working", 55);
+  async function processSplitPdf() {    setStatus("กำลังแยกหน้า PDF...", "working", 55);
     const outputs = await PdfOps.splitPdfDocument(PDFLib, state.parsed[0], (done, total) => {
       setStatus(`กำลังสร้าง PDF หน้า ${done}/${total}`, "working", 55 + (done / total) * 25);
     });
@@ -554,6 +566,54 @@
     );
     downloadBlob(blob, outputName);
     return `${outputs.length} หน้า ถูกแยกเป็น ${outputs.length} PDF ใน ${outputName}`;
+  }
+
+  async function processPdf2Excel() {
+    if (!PDFJS) throw new Error("โหลด PDF library ไม่สำเร็จ กรุณารีเฟรชหน้าเว็บ");
+    setStatus("กำลังอ่านข้อความจาก PDF...", "working", 25);
+
+    const workbook = XLSX.utils.book_new();
+    const usedNames = new Set();
+    const multi = state.parsed.length > 1;
+    const totalPages = state.parsed.reduce((sum, ref) => sum + (ref.unitCount || 0), 0);
+    let done = 0;
+
+    for (const ref of state.parsed) {
+      const doc = await getPdfjsDoc(ref);
+      const base = ExcelOps.sanitizeSheetName(ExcelOps.basename(ref.name), "PDF");
+      for (let p = 1; p <= doc.numPages; p += 1) {
+        const page = await doc.getPage(p);
+        const content = await page.getTextContent();
+        const items = content.items
+          .filter((it) => typeof it.str === "string")
+          .map((it) => {
+            const tr = it.transform || [1, 0, 0, 1, 0, 0];
+            return { str: it.str, x: tr[4], y: tr[5], w: it.width || 0, h: it.height || Math.abs(tr[3]) || 10 };
+          });
+        const matrix = PdfTableOps.buildMatrixFromItems(items);
+        const worksheet = XLSX.utils.aoa_to_sheet(matrix);
+        worksheet["!autofilter"] = { ref: worksheet["!ref"] || "A1" };
+        worksheet["!cols"] = (matrix[0] || [""]).map((_, col) => {
+          let max = 8;
+          for (let r = 0; r < Math.min(matrix.length, 200); r += 1) {
+            const v = matrix[r][col];
+            max = Math.max(max, v == null ? 0 : String(v).length);
+          }
+          return { wch: Math.min(max + 2, 50) };
+        });
+        const sheetName = ExcelOps.uniqueSheetName(multi ? `${base}-P${p}` : `Page ${p}`, usedNames, base);
+        XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
+        usedNames.add(sheetName);
+        done += 1;
+        setStatus(`กำลังแปลงหน้า ${done}/${totalPages}`, "working", 25 + (done / Math.max(1, totalPages)) * 65);
+        await new Promise((resolve) => setTimeout(resolve, 0));
+      }
+    }
+
+    if (!workbook.SheetNames.length) throw new Error("ไม่พบเนื้อหาใน PDF");
+    const outputName = ensureExtension(els.outputName.value, "xlsx");
+    XLSX.writeFile(workbook, outputName, { bookType: "xlsx", compression: true });
+    return `แปลง ${totalPages} หน้าเป็น ${workbook.SheetNames.length} Sheet ใน ${outputName}`;
   }
 
   async function processFiles() {
@@ -572,6 +632,7 @@
       if (state.mode === "mergeExcel") message = await processMergeExcel();
       else if (state.mode === "combineExcel") message = await processCombineExcel();
       else if (state.mode === "splitExcel") message = await processSplitExcel();
+      else if (state.mode === "pdf2excel") message = await processPdf2Excel();
       else if (state.mode === "mergePdf") message = await processMergePdf();
       else message = await processSplitPdf();
       setStatus(message, "success", 100);

@@ -102,6 +102,8 @@ button { cursor: pointer; }
   letter-spacing: 0.08em;
 }
 .pdf-card .mode-type, .note-type.pdf { background: #fce8e6; color: #a53a32; }
+.convert-card .mode-type, .note-type.convert { background: #e6f0fb; color: #1f5a8b; }
+.convert-card.active { border-color: #1f5a8b; background: #eef5fc; }
 .pdf-card.active { border-color: #c84b43; background: #fff0ef; box-shadow: 0 9px 30px rgba(200, 75, 67, 0.12); }
 .pdf-mode { --accent: #c84b43; --accent-dark: #92342e; --accent-soft: #fff0ef; }
 .note-grid article { display: flex; flex-direction: column; align-items: flex-start; }

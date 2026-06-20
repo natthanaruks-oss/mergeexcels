@@ -10,7 +10,7 @@
     "vendor": "node scripts/copy-vendor.mjs",
     "dev": "npm run vendor && wrangler dev",
     "deploy": "npm run vendor && wrangler deploy",
-    "test": "node tests/excel-ops.test.cjs && node tests/pdf-ops.test.cjs"
+    "test": "node tests/excel-ops.test.cjs && node tests/pdf-ops.test.cjs && node tests/pdftable-ops.test.cjs"
   },
   "dependencies": {
     "jszip": "3.10.1",

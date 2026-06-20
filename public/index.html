@@ -12,6 +12,7 @@
     <script defer src="./vendor/pdf.min.js"></script>
     <script defer src="./excel-ops.js"></script>
     <script defer src="./pdf-ops.js"></script>
+    <script defer src="./pdftable-ops.js"></script>
     <script defer src="./app.js"></script>
   </head>
   <body>
@@ -59,6 +60,13 @@
           <strong>Split PDF</strong>
           <span>แยก PDF เป็นไฟล์ละหนึ่งหน้า</span>
           <small>ผลลัพธ์: ZIP หลาย PDF</small>
+        </button>
+        <button class="mode-card convert-card" type="button" data-mode="pdf2excel" aria-pressed="false">
+          <span class="mode-number">06</span>
+          <span class="mode-type">PDF → EXCEL</span>
+          <strong>PDF to Excel</strong>
+          <span>ดึงข้อความและตารางจาก PDF ออกมาเป็น Excel</span>
+          <small>ผลลัพธ์: 1 ไฟล์ Excel (1 หน้า = 1 Sheet)</small>
         </button>
       </section>
 
@@ -170,6 +178,11 @@
             <span class="note-type pdf">PDF</span>
             <strong>Split PDF</strong>
             <p>แยก PDF หนึ่งไฟล์เป็นไฟล์ละหนึ่งหน้า และบรรจุไว้ใน ZIP เดียว</p>
+          </article>
+          <article>
+            <span class="note-type convert">PDF → EXCEL</span>
+            <strong>PDF to Excel</strong>
+            <p>ดึงข้อความตามตำแหน่งบนหน้ากระดาษมาจัดเป็นแถว/คอลัมน์ใน Excel เหมาะกับ PDF ที่เป็นข้อความ (ไม่ใช่ไฟล์สแกน)</p>
           </article>
         </div>
         <p class="privacy-note">ไฟล์ถูกประมวลผลบนเครื่องของคุณ ไม่ได้อัปโหลดไปยังเซิร์ฟเวอร์</p>
