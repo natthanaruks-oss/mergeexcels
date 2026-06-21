@@ -104,6 +104,16 @@ button { cursor: pointer; }
 .pdf-card .mode-type, .note-type.pdf { background: #fce8e6; color: #a53a32; }
 .convert-card .mode-type, .note-type.convert { background: #e6f0fb; color: #1f5a8b; }
 .convert-card.active { border-color: #1f5a8b; background: #eef5fc; }
+.ocr-card .mode-type, .note-type.ocr { background: #f3e8fb; color: #7a3a9b; }
+.ocr-card.active { border-color: #7a3a9b; background: #f7f0fc; }
+
+.range-panel { margin-top: 12px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px; background: #f7fbff; }
+.range-panel.hidden { display: none; }
+.range-title { display: block; font-weight: 700; font-size: 13px; margin-bottom: 8px; }
+.range-inputs { display: flex; gap: 14px; flex-wrap: wrap; }
+.range-inputs label { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); }
+.range-inputs input { width: 90px; padding: 7px 9px; border: 1px solid var(--line); border-radius: 8px; font-size: 13px; }
+.range-panel small { display: block; margin-top: 8px; color: var(--muted); font-size: 11px; }
 .pdf-card.active { border-color: #c84b43; background: #fff0ef; box-shadow: 0 9px 30px rgba(200, 75, 67, 0.12); }
 .pdf-mode { --accent: #c84b43; --accent-dark: #92342e; --accent-soft: #fff0ef; }
 .note-grid article { display: flex; flex-direction: column; align-items: flex-start; }

@@ -84,6 +84,19 @@
       dropHint: "เลือกได้หลายไฟล์ · ทุกหน้าจะต่อกันลงมาใน Sheet เดียว",
       unitLabel: "หน้า",
     },
+    ocr2excel: {
+      kind: "pdf",
+      eyebrow: "OCR · ทดลอง",
+      title: "PDF สแกน → Excel (OCR)",
+      description: "อ่านตัวอักษรจาก PDF ที่เป็นรูปภาพ/สแกนด้วย OCR (ไทย+อังกฤษ) — โหลด engine ครั้งแรก ~7MB และช้ากว่าปกติมาก เหมาะกับสแกนชัดๆ",
+      button: "เริ่ม OCR เป็น Excel",
+      output: "ocr_to_excel.xlsx",
+      extension: "xlsx",
+      multiple: true,
+      dropTitle: "ลาก PDF สแกน มาวาง หรือคลิกเพื่อเลือกไฟล์",
+      dropHint: "แนะนำเลือกช่วงหน้าทีละไม่กี่หน้า เพราะ OCR ช้า",
+      unitLabel: "หน้า",
+    },
   };
 
   const state = {
@@ -126,6 +139,9 @@
     pageGrid: document.getElementById("pageGrid"),
     pageGridList: document.getElementById("pageGridList"),
     pageGridCount: document.getElementById("pageGridCount"),
+    pageRangePanel: document.getElementById("pageRangePanel"),
+    pageStart: document.getElementById("pageStart"),
+    pageEnd: document.getElementById("pageEnd"),
     statusBox: document.getElementById("statusBox"),
     statusText: document.getElementById("statusText"),
     progressBar: document.getElementById("progressBar"),
@@ -189,7 +205,10 @@
     els.dropHint.textContent = config.dropHint;
     els.unitLabel.textContent = config.unitLabel;
     els.combineOptions.classList.toggle("hidden", mode !== "combineExcel");
-    document.body.classList.toggle("pdf-mode", config.kind === "pdf" && mode !== "pdf2excel");
+    const usesExcelTheme = mode === "pdf2excel" || mode === "ocr2excel";
+    document.body.classList.toggle("pdf-mode", config.kind === "pdf" && !usesExcelTheme);
+    els.pageRangePanel.classList.toggle("hidden", !usesExcelTheme);
+    if (!usesExcelTheme) { els.pageStart.value = ""; els.pageEnd.value = ""; }
 
     resetFiles();
   }
@@ -572,56 +591,162 @@
     if (!PDFJS) throw new Error("โหลด PDF library ไม่สำเร็จ กรุณารีเฟรชหน้าเว็บ");
     setStatus("กำลังอ่านข้อความจาก PDF...", "working", 20);
 
-    const allItems = [];
-    const PAGE_GAP = 40; // ระยะเว้นระหว่างหน้า กันแถวท้ายหน้ารวมกับหัวหน้าถัดไป
-    let vOffset = 0;
-    const totalPages = state.parsed.reduce((sum, ref) => sum + (ref.unitCount || 0), 0);
+    const rawStart = parseInt(els.pageStart.value, 10);
+    const rawEnd = parseInt(els.pageEnd.value, 10);
+    const workbook = XLSX.utils.book_new();
+    const usedNames = new Set();
+    const multiFile = state.parsed.length > 1;
     let done = 0;
+    let planned = 0;
 
-    // รวมข้อความทุกหน้า/ทุกไฟล์ เรียงต่อกันลงล่าง (หน้า 1 อยู่บนสุด)
+    // นับจำนวนหน้าที่จะแปลงจริง (ตามช่วงที่เลือก)
+    const plans = [];
     for (const ref of state.parsed) {
       const doc = await getPdfjsDoc(ref);
-      for (let p = 1; p <= doc.numPages; p += 1) {
-        const page = await doc.getPage(p);
+      const start = Number.isFinite(rawStart) ? Math.max(1, rawStart) : 1;
+      const end = Number.isFinite(rawEnd) ? Math.min(doc.numPages, rawEnd) : doc.numPages;
+      plans.push({ ref, doc, start, end, base: ExcelOps.sanitizeSheetName(ExcelOps.basename(ref.name), "PDF") });
+      if (end >= start) planned += end - start + 1;
+    }
+    if (planned <= 0) throw new Error("ช่วงหน้าที่เลือกไม่ถูกต้อง กรุณาตรวจหน้าเริ่ม/หน้าสิ้นสุด");
+
+    for (const plan of plans) {
+      for (let p = plan.start; p <= plan.end; p += 1) {
+        const page = await plan.doc.getPage(p);
         const viewport = page.getViewport({ scale: 1 });
         const content = await page.getTextContent();
-        content.items.forEach((it) => {
-          if (typeof it.str !== "string") return;
-          const tr = it.transform || [1, 0, 0, 1, 0, 0];
-          const fromTop = viewport.height - tr[5]; // ระยะจากขอบบนของหน้า
-          allItems.push({
-            str: it.str,
-            x: tr[4],
-            y: -(vOffset + fromTop), // ยิ่งอยู่บนของเอกสารรวม ค่า y ยิ่งมาก
-            w: it.width || 0,
-            h: it.height || Math.abs(tr[3]) || 10,
+        const items = content.items
+          .filter((it) => typeof it.str === "string")
+          .map((it) => {
+            const tr = it.transform || [1, 0, 0, 1, 0, 0];
+            return { str: it.str, x: tr[4], y: tr[5], w: it.width || 0, h: it.height || Math.abs(tr[3]) || 10 };
           });
+        const matrix = PdfTableOps.buildMatrixFromItems(items);
+        const worksheet = XLSX.utils.aoa_to_sheet(matrix);
+        worksheet["!autofilter"] = { ref: worksheet["!ref"] || "A1" };
+        worksheet["!cols"] = (matrix[0] || [""]).map((_, col) => {
+          let max = 8;
+          for (let r = 0; r < Math.min(matrix.length, 500); r += 1) {
+            const v = matrix[r][col];
+            max = Math.max(max, v == null ? 0 : String(v).length);
+          }
+          return { wch: Math.min(max + 2, 60) };
         });
-        vOffset += viewport.height + PAGE_GAP;
+        const wanted = multiFile ? `${plan.base}-P${p}` : `Page ${p}`;
+        const sheetName = ExcelOps.uniqueSheetName(wanted, usedNames, plan.base);
+        XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
+        usedNames.add(sheetName);
         done += 1;
-        setStatus(`กำลังอ่านหน้า ${done}/${totalPages}`, "working", 20 + (done / Math.max(1, totalPages)) * 60);
+        setStatus(`กำลังแปลงหน้า ${done}/${planned}`, "working", 20 + (done / planned) * 70);
         await new Promise((resolve) => setTimeout(resolve, 0));
       }
     }
 
-    setStatus("กำลังจัดตารางและสร้าง Excel...", "working", 88);
-    const matrix = PdfTableOps.buildMatrixFromItems(allItems);
-    const workbook = XLSX.utils.book_new();
-    const worksheet = XLSX.utils.aoa_to_sheet(matrix);
-    worksheet["!autofilter"] = { ref: worksheet["!ref"] || "A1" };
-    worksheet["!cols"] = (matrix[0] || [""]).map((_, col) => {
-      let max = 8;
-      for (let r = 0; r < Math.min(matrix.length, 500); r += 1) {
-        const v = matrix[r][col];
-        max = Math.max(max, v == null ? 0 : String(v).length);
-      }
-      return { wch: Math.min(max + 2, 60) };
-    });
-    XLSX.utils.book_append_sheet(workbook, worksheet, "PDF Data");
-
+    if (!workbook.SheetNames.length) throw new Error("ไม่พบเนื้อหาใน PDF");
     const outputName = ensureExtension(els.outputName.value, "xlsx");
     XLSX.writeFile(workbook, outputName, { bookType: "xlsx", compression: true });
-    return `รวม ${totalPages} หน้าเป็น 1 Sheet (${matrix.length} แถว) ใน ${outputName}`;
+    return `แปลง ${planned} หน้าเป็น ${workbook.SheetNames.length} Sheet ใน ${outputName}`;
+  }
+
+  let tesseractPromise = null;
+  function loadTesseract() {
+    if (window.Tesseract) return Promise.resolve(window.Tesseract);
+    if (!tesseractPromise) {
+      tesseractPromise = new Promise((resolve, reject) => {
+        const s = document.createElement("script");
+        s.src = "https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js";
+        s.onload = () => (window.Tesseract ? resolve(window.Tesseract) : reject(new Error("Tesseract ไม่พร้อมใช้งาน")));
+        s.onerror = () => reject(new Error("โหลด OCR engine ไม่สำเร็จ — ตรวจการเชื่อมต่ออินเทอร์เน็ต"));
+        document.head.appendChild(s);
+      });
+    }
+    return tesseractPromise;
+  }
+
+  async function processOcr2Excel() {
+    if (!PDFJS) throw new Error("โหลด PDF library ไม่สำเร็จ กรุณารีเฟรชหน้าเว็บ");
+    setStatus("กำลังโหลด OCR engine (ครั้งแรกช้า ~7MB)...", "working", 8);
+    const Tesseract = await loadTesseract();
+
+    const rawStart = parseInt(els.pageStart.value, 10);
+    const rawEnd = parseInt(els.pageEnd.value, 10);
+    const plans = [];
+    let planned = 0;
+    for (const ref of state.parsed) {
+      const doc = await getPdfjsDoc(ref);
+      const start = Number.isFinite(rawStart) ? Math.max(1, rawStart) : 1;
+      const end = Number.isFinite(rawEnd) ? Math.min(doc.numPages, rawEnd) : doc.numPages;
+      plans.push({ ref, doc, start, end, base: ExcelOps.sanitizeSheetName(ExcelOps.basename(ref.name), "OCR") });
+      if (end >= start) planned += end - start + 1;
+    }
+    if (planned <= 0) throw new Error("ช่วงหน้าที่เลือกไม่ถูกต้อง");
+
+    setStatus("กำลังเตรียม OCR (ไทย+อังกฤษ)...", "working", 14);
+    let done = 0;
+    const worker = await Tesseract.createWorker("tha+eng", 1, {
+      logger: (m) => {
+        if (m && m.status === "recognizing text" && typeof m.progress === "number") {
+          setStatus(`OCR หน้า ${done + 1}/${planned} (${Math.round(m.progress * 100)}%)`, "working", 20 + ((done + m.progress) / planned) * 70);
+        }
+      },
+    });
+
+    const workbook = XLSX.utils.book_new();
+    const usedNames = new Set();
+    const multiFile = state.parsed.length > 1;
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d", { willReadFrequently: true });
+
+    try {
+      for (const plan of plans) {
+        for (let p = plan.start; p <= plan.end; p += 1) {
+          const page = await plan.doc.getPage(p);
+          const viewport = page.getViewport({ scale: 2 }); // 2x เพื่อความคมของ OCR
+          canvas.width = Math.ceil(viewport.width);
+          canvas.height = Math.ceil(viewport.height);
+          await page.render({ canvasContext: ctx, viewport }).promise;
+
+          const { data } = await worker.recognize(canvas, {}, { blocks: true });
+          const words = (data.words || []).filter((w) => w.text && w.text.trim() && w.bbox);
+          let matrix;
+          if (words.length) {
+            const items = words.map((w) => ({
+              str: w.text,
+              x: w.bbox.x0,
+              y: -(w.bbox.y0),
+              w: w.bbox.x1 - w.bbox.x0,
+              h: w.bbox.y1 - w.bbox.y0,
+            }));
+            matrix = PdfTableOps.buildMatrixFromItems(items);
+          } else {
+            matrix = (data.text || "").split(/\r?\n/).map((line) => [line]);
+            if (!matrix.length) matrix = [["(OCR ไม่พบข้อความ)"]];
+          }
+
+          const worksheet = XLSX.utils.aoa_to_sheet(matrix);
+          worksheet["!cols"] = (matrix[0] || [""]).map((_, col) => {
+            let max = 8;
+            for (let r = 0; r < Math.min(matrix.length, 500); r += 1) {
+              const v = matrix[r][col];
+              max = Math.max(max, v == null ? 0 : String(v).length);
+            }
+            return { wch: Math.min(max + 2, 60) };
+          });
+          const wanted = multiFile ? `${plan.base}-P${p}` : `Page ${p}`;
+          const sheetName = ExcelOps.uniqueSheetName(wanted, usedNames, plan.base);
+          XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
+          usedNames.add(sheetName);
+          done += 1;
+        }
+      }
+    } finally {
+      await worker.terminate();
+    }
+
+    if (!workbook.SheetNames.length) throw new Error("ไม่พบเนื้อหาจาก OCR");
+    const outputName = ensureExtension(els.outputName.value, "xlsx");
+    XLSX.writeFile(workbook, outputName, { bookType: "xlsx", compression: true });
+    return `OCR ${planned} หน้าเป็น ${workbook.SheetNames.length} Sheet ใน ${outputName} (โปรดตรวจทานความถูกต้อง)`;
   }
 
   async function processFiles() {
@@ -641,6 +766,7 @@
       else if (state.mode === "combineExcel") message = await processCombineExcel();
       else if (state.mode === "splitExcel") message = await processSplitExcel();
       else if (state.mode === "pdf2excel") message = await processPdf2Excel();
+      else if (state.mode === "ocr2excel") message = await processOcr2Excel();
       else if (state.mode === "mergePdf") message = await processMergePdf();
       else message = await processSplitPdf();
       setStatus(message, "success", 100);

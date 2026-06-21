@@ -68,6 +68,13 @@
           <span>ดึงข้อความและตารางจาก PDF ออกมาเป็น Excel</span>
           <small>ผลลัพธ์: 1 ไฟล์ Excel · ทุกหน้ารวมใน Sheet เดียว</small>
         </button>
+        <button class="mode-card ocr-card" type="button" data-mode="ocr2excel" aria-pressed="false">
+          <span class="mode-number">07</span>
+          <span class="mode-type">OCR · ทดลอง</span>
+          <strong>PDF สแกน → Excel</strong>
+          <span>อ่านตัวอักษรจาก PDF ที่เป็นรูปภาพ/สแกน (ไทย+อังกฤษ)</span>
+          <small>โหลด OCR ครั้งแรก ~7MB · ช้ากว่าปกติ</small>
+        </button>
       </section>
 
       <section class="workspace">
@@ -136,6 +143,15 @@
         <div class="output-row">
           <label for="outputName">ชื่อไฟล์ผลลัพธ์</label>
           <input id="outputName" type="text" value="merged_files.xlsx" spellcheck="false" />
+        </div>
+
+        <div id="pageRangePanel" class="range-panel hidden">
+          <span class="range-title">เลือกช่วงหน้า (เว้นว่าง = ทั้งไฟล์)</span>
+          <div class="range-inputs">
+            <label>หน้าเริ่ม <input id="pageStart" type="number" min="1" placeholder="1" /></label>
+            <label>ถึงหน้า <input id="pageEnd" type="number" min="1" placeholder="ท้ายไฟล์" /></label>
+          </div>
+          <small>เช่น ต้องการเฉพาะตารางงบหน้า 50–55 ก็ใส่ 50 ถึง 55 (ใช้กับทุกไฟล์ที่เลือก)</small>
         </div>
 
         <div id="statusBox" class="status-box" role="status" aria-live="polite">

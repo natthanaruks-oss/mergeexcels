@@ -132,13 +132,16 @@
     }));
 
     function finalize(matrix) {
-      let width = 0;
-      for (const row of matrix) {
-        let last = row.length - 1;
-        while (last >= 0 && (row[last] === "" || row[last] == null)) last -= 1;
-        width = Math.max(width, last + 1);
+      if (!matrix.length) return [[""]];
+      const colCount = matrix.reduce((mx, r) => Math.max(mx, r.length), 0);
+      // keep only columns that have at least one non-empty cell (drops leading/interior/trailing empties)
+      const keep = [];
+      for (let c = 0; c < colCount; c += 1) {
+        const used = matrix.some((r) => r[c] != null && String(r[c]).trim() !== "");
+        if (used) keep.push(c);
       }
-      return matrix.map((row) => row.slice(0, Math.max(1, width)).map((c) => (c == null ? "" : c)));
+      if (!keep.length) keep.push(0);
+      return matrix.map((row) => keep.map((c) => (row[c] == null ? "" : row[c])));
     }
   }
 
