@@ -8,7 +8,8 @@ console.log("✅ 1 strip artifacts");
 
 // 2) sara am recompose (ํา -> ำ)
 assert.equal(TC.correctThai("น\u0E49\u0E4D\u0E32"), "น\u0E49\u0E33");
-console.log("✅ 2 sara-am recompose");
+assert.equal(TC.correctThai("บา\u0E4Dรุง"), "บำรุง");
+console.log("✅ 2 sara-am recompose (both glyph orders)");
 
 // 3) tone-mark / upper-vowel swap
 assert.equal(TC.correctThai("ก\u0E48\u0E34"), "ก\u0E34\u0E48");

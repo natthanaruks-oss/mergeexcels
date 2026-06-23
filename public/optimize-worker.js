@@ -6,27 +6,55 @@
  * เพื่อให้ปุ่ม ยกเลิก, Progress และหน้าจอยังคงตอบสนองระหว่างประมวลผล
  */
 importScripts(
-  "./vendor/xlsx.full.min.js?v=3.3.2",
-  "./vendor/jszip.min.js?v=3.3.2",
-  "./optimize-ops.js?v=3.3.2"
+  "./vendor/xlsx.full.min.js?v=3.3.4",
+  "./vendor/jszip.min.js?v=3.3.4",
+  "./optimize-ops.js?v=3.3.4"
 );
 
 function postProgress(message, progress) {
   self.postMessage({ type: "progress", message, progress });
 }
 
-// อ่านแบบ Dense Array เพื่อลดค่าใช้จ่ายของ Cell Address Object ในไฟล์หลายหมื่นแถว
-function readWorkbook(buffer) {
-  return XLSX.read(buffer, {
+// อ่าน Workbook โดยลอง Dense ก่อน (เหมาะกับ Oracle Raw Data) และ fallback เป็น Sparse
+// เมื่อไฟล์มีโครงสร้างผิดปกติหรือ Engine ไม่สามารถสร้าง Array ขนาดใหญ่ได้
+function readWorkbook(buffer, fileSize = 0) {
+  const common = {
     type: "array",
-    dense: true,
     cellFormula: true,
     cellDates: true,
     cellNF: true,
     cellStyles: false,
     cellText: false,
     bookVBA: false,
-  });
+    bookDeps: false,
+    bookProps: false,
+    WTF: false,
+  };
+  const largeFile = Number(fileSize) >= 80 * 1024 * 1024;
+  const attempts = largeFile
+    ? [
+        { dense: false, label: "Large-file Sparse" },
+        { dense: true, label: "Dense fallback" },
+      ]
+    : [
+        { dense: true, label: "Dense" },
+        { dense: false, label: "Sparse fallback" },
+      ];
+  let lastError = null;
+
+  for (const attempt of attempts) {
+    try {
+      postProgress(`กำลังอ่าน Workbook (${attempt.label} mode)...`, attempt.dense ? 8 : 12);
+      return XLSX.read(buffer, { ...common, dense: attempt.dense });
+    } catch (error) {
+      lastError = error;
+      // Fallback เฉพาะข้อผิดพลาดด้าน Memory/Array; ข้อผิดพลาดไฟล์เสียไม่ควรอ่านซ้ำ
+      if (!/invalid array length|array buffer allocation failed|out of memory|allocation failed|memory/i.test(String(error && error.message))) {
+        break;
+      }
+    }
+  }
+  throw new Error(OptimizeOps.explainWorkbookReadError(lastError, fileSize));
 }
 
 function writeWorkbook(workbook) {
@@ -61,7 +89,7 @@ function safePartName(baseName, sheetName, part, extension) {
 async function processOptimize(payload) {
   const { buffer, fileName, fileSize, options } = payload;
   postProgress("กำลังอ่านโครงสร้าง Workbook...", 8);
-  const workbook = readWorkbook(buffer);
+  const workbook = readWorkbook(buffer, fileSize);
   const baseName = OptimizeOps.sanitizeFilename(OptimizeOps.basename(fileName), "optimized");
 
   if (options.splitEnabled) {
@@ -144,7 +172,7 @@ self.onmessage = async (event) => {
   try {
     if (payload.action === "analyze") {
       postProgress("กำลังวิเคราะห์ไฟล์ใน Web Worker...", 10);
-      const workbook = readWorkbook(payload.buffer);
+      const workbook = readWorkbook(payload.buffer, payload.fileSize || 0);
       postProgress("กำลังตรวจจำนวนแถว เซลล์ สูตร และช่วงข้อมูล...", 55);
       const analysis = OptimizeOps.analyzeWorkbook(XLSX, workbook, payload.fileSize || 0);
       self.postMessage({ type: "analysis", analysis });
@@ -159,6 +187,7 @@ self.onmessage = async (event) => {
 
     throw new Error("คำสั่ง Web Worker ไม่ถูกต้อง");
   } catch (error) {
-    self.postMessage({ type: "error", message: error && error.message ? error.message : "ไม่สามารถประมวลผลไฟล์ได้" });
+    const message = OptimizeOps.explainWorkbookReadError(error, payload.fileSize || 0);
+    self.postMessage({ type: "error", message });
   }
 };

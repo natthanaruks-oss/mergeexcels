@@ -34,6 +34,8 @@ Web Application สำหรับจัดการไฟล์ Excel และ
 
 ข้อจำกัด: Chart, Image, Macro, Drawing และ Excel Feature ขั้นสูงอาจไม่ถูกเก็บในไฟล์ที่ Optimize แล้ว จึงควรใช้กับ Raw Data หรือไฟล์จากระบบที่เน้นข้อมูลเป็นหลัก
 
+ขนาดไฟล์ที่แนะนำ: ไม่เกิน 250 MB สำหรับ Browser ทั่วไป ไฟล์ 80 MB ขึ้นไปจะใช้ Large-file Sparse mode และอาจใช้เวลาหลายนาที ส่วนไฟล์มากกว่า 512 MB จะถูกหยุดก่อนโหลดเข้า RAM เพื่อป้องกัน Browser ค้าง; ควรแบ่ง Export จาก Oracle หรือใช้ CSV/Local Desktop Engine
+
 ## โครงสร้างสำคัญ
 
 ```text
@@ -98,7 +100,7 @@ Cloudflare Build Settings:
 3. ลาก **ทุกไฟล์และโฟลเดอร์ที่อยู่ข้างใน** ขึ้น Repo เดิม
 4. ต้องเห็น `public/`, `package.json`, `package-lock.json`, `wrangler.jsonc` และ `.node-version` ที่หน้า Root
 5. Commit แล้วรอ Cloudflare Deploy อัตโนมัติ
-6. เปิดเว็บและตรวจ Version Badge ต้องเป็น `v3.3.2`
+6. เปิดเว็บและตรวจ Version Badge ต้องเป็น `v3.3.4`
 
 ## Security Notes
 

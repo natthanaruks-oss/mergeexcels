@@ -34,6 +34,77 @@
     return Math.max(0, i - 1);
   }
 
+  // PDF บางไฟล์แยกสระ "ำ" เป็น 2 glyph: "า" อยู่ในคำ แต่ "ํ" (นิคหิต)
+  // หลุดออกมาเป็น text item แยกและมีพิกัดสูงกว่าบรรทัดเล็กน้อย ทำให้ชื่อสายทาง
+  // กลายเป็น "บารุง / กาหนด / อานวย" และมีวงกลมประหลาดไปโผล่คอลัมน์อื่น
+  // ฟังก์ชันนี้ซ่อมเฉพาะนิคหิตที่หา "า" ใกล้เคียงทางเรขาคณิตได้อย่างมั่นใจเท่านั้น
+  // เพื่อหลีกเลี่ยงการเดาแก้คำอื่นโดยไม่มีหลักฐานจากตำแหน่งใน PDF
+  function repairDetachedSaraAm(items, options = {}) {
+    const source = items.map((it) => ({ ...it }));
+    if (!source.length) return source;
+
+    // ใช้ความสูงของ text item ปกติเป็นฐาน ไม่ใช้ glyph combining ที่มักมีความสูงเล็กมาก
+    // มิฉะนั้น tolerance จะต่ำเกินไปและไม่สามารถจับนิคหิตที่ลอยเหนือบรรทัดได้
+    const baseHeights = source
+      .filter((it) => !/^\u0E4D+$/.test(String(it.str || "").replace(/\s+/g, "")))
+      .map((it) => Number(it.h) || 0)
+      .filter((h) => h > 0);
+    const allHeights = source.map((it) => Number(it.h) || 0).filter((h) => h > 0);
+    const mh = median(baseHeights.length ? baseHeights : allHeights) || 10;
+    const maxDy = options.saraAmVerticalTolerance != null
+      ? Number(options.saraAmVerticalTolerance)
+      : Math.max(8, mh * 2.2);
+    const extraDx = options.saraAmHorizontalTolerance != null
+      ? Number(options.saraAmHorizontalTolerance)
+      : Math.max(8, mh * 1.4);
+    const consumed = new Set();
+
+    for (let mi = 0; mi < source.length; mi += 1) {
+      const mark = source[mi];
+      const markText = String(mark.str || "").replace(/\s+/g, "");
+      if (!/^\u0E4D+$/.test(markText)) continue; // ซ่อมเฉพาะนิคหิตเดี่ยว ๆ
+
+      for (let repeat = 0; repeat < markText.length; repeat += 1) {
+        let best = null;
+        for (let ci = 0; ci < source.length; ci += 1) {
+          if (ci === mi || consumed.has(ci)) continue;
+          const candidate = source[ci];
+          const text = String(candidate.str || "");
+          if (!text.includes("า")) continue;
+
+          const dy = Math.abs((Number(candidate.y) || 0) - (Number(mark.y) || 0));
+          if (dy > maxDy) continue;
+
+          const chars = Array.from(text);
+          const width = Number(candidate.w) > 0
+            ? Number(candidate.w)
+            : Math.max(mh * 0.6 * Math.max(1, chars.length), mh);
+          const charW = width / Math.max(1, chars.length);
+          const left = Number(candidate.x) || 0;
+          const markX = Number(mark.x) || 0;
+          if (markX < left - charW - extraDx || markX > left + width + charW + extraDx) continue;
+
+          for (let i = 0; i < chars.length; i += 1) {
+            if (chars[i] !== "า") continue;
+            const charCenter = left + charW * (i + 0.5);
+            const dx = Math.abs(markX - charCenter);
+            const score = dx + dy * 1.35;
+            if (!best || score < best.score) best = { ci, i, score };
+          }
+        }
+
+        const scoreLimit = Math.max(extraDx + mh * 1.6, mh * 3.2);
+        if (!best || best.score > scoreLimit) break;
+        const chars = Array.from(String(source[best.ci].str || ""));
+        chars[best.i] = "ำ";
+        source[best.ci].str = chars.join("");
+        consumed.add(mi);
+      }
+    }
+
+    return source.filter((_, i) => !consumed.has(i));
+  }
+
   // Insert a space at Thai <-> Latin/digit boundaries (e.g. "แก้ไขworkflow" -> "แก้ไข workflow").
   // Thai combining marks/vowels stay glued because both sides are in the Thai block.
   function addScriptSpaces(s) {
@@ -47,7 +118,7 @@
    * Handles Thai combining glyphs (no-space join) and separates prose from tables.
    */
   function buildMatrixFromItems(items, options = {}) {
-    const clean = (Array.isArray(items) ? items : [])
+    const raw = (Array.isArray(items) ? items : [])
       .map((it) => ({
         str: String(it.str == null ? "" : it.str),
         x: Number(it.x) || 0,
@@ -56,6 +127,11 @@
         h: Number(it.h) || 0,
       }))
       .filter((it) => it.str.replace(/\s+/g, "") !== ""); // drop pure-whitespace items
+
+    // ซ่อมนิคหิตของสระ "ำ" ที่ PDF แยกเป็น glyph ลอย ก่อนจัดกลุ่มแถว/คอลัมน์
+    const clean = options.repairDetachedSaraAm === false
+      ? raw
+      : repairDetachedSaraAm(raw, options);
 
     if (!clean.length) {
       return [[options.emptyNote || "(ไม่พบข้อความในหน้านี้ — อาจเป็น PDF สแกน/รูปภาพ)"]];
@@ -233,5 +309,5 @@
     return out.length ? out : matrix;
   }
 
-  return { buildMatrixFromItems, mergeWrappedRows, clusterAnchors, columnFromBoundaries, median };
+  return { buildMatrixFromItems, mergeWrappedRows, repairDetachedSaraAm, clusterAnchors, columnFromBoundaries, median };
 });

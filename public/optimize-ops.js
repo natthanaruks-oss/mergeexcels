@@ -24,6 +24,60 @@
     return cleaned || fallback;
   }
 
+  const MIB = 1024 * 1024;
+  const RECOMMENDED_BROWSER_BYTES = 250 * MIB;
+  const HARD_BROWSER_BYTES = 512 * MIB;
+
+  // XLSX ต้องแตก ZIP และสร้าง Workbook ใน RAM จึงใช้หน่วยความจำมากกว่าขนาดไฟล์หลายเท่า
+  // Policy นี้ป้องกัน Browser ค้าง/ปิดตัวเองก่อนเริ่มอ่านไฟล์ขนาดเกินขีดจำกัดที่ปลอดภัย
+  function getLargeFilePolicy(fileSize = 0) {
+    const bytes = Number(fileSize) || 0;
+    if (bytes > HARD_BROWSER_BYTES) {
+      return {
+        level: "blocked",
+        blocked: true,
+        recommendedBytes: RECOMMENDED_BROWSER_BYTES,
+        hardBytes: HARD_BROWSER_BYTES,
+        message: `ไฟล์มีขนาด ${(bytes / MIB).toFixed(0)} MB ซึ่งเกินขีดจำกัดของการประมวลผล XLSX แบบ Client-side (${HARD_BROWSER_BYTES / MIB} MB) Browser อาจใช้ RAM หลาย GB และค้างได้ กรุณา Export จาก Oracle เป็น CSV/แบ่งช่วงข้อมูล หรือใช้ Local Desktop Engine`,
+      };
+    }
+    if (bytes > RECOMMENDED_BROWSER_BYTES) {
+      return {
+        level: "extreme",
+        blocked: false,
+        recommendedBytes: RECOMMENDED_BROWSER_BYTES,
+        hardBytes: HARD_BROWSER_BYTES,
+        message: `ไฟล์มีขนาด ${(bytes / MIB).toFixed(0)} MB สูงกว่าช่วงที่แนะนำ (${RECOMMENDED_BROWSER_BYTES / MIB} MB) การอ่านอาจใช้ RAM มากและล้มเหลวได้`,
+      };
+    }
+    if (bytes >= 80 * MIB) {
+      return {
+        level: "high",
+        blocked: false,
+        recommendedBytes: RECOMMENDED_BROWSER_BYTES,
+        hardBytes: HARD_BROWSER_BYTES,
+        message: `ไฟล์มีขนาด ${(bytes / MIB).toFixed(0)} MB ระบบจะใช้ Large-file fallback และอาจใช้เวลาหลายนาที`,
+      };
+    }
+    return {
+      level: "normal",
+      blocked: false,
+      recommendedBytes: RECOMMENDED_BROWSER_BYTES,
+      hardBytes: HARD_BROWSER_BYTES,
+      message: "",
+    };
+  }
+
+  function explainWorkbookReadError(error, fileSize = 0) {
+    const raw = String(error && error.message ? error.message : error || "");
+    const policy = getLargeFilePolicy(fileSize);
+    if (policy.blocked) return policy.message;
+    if (/invalid array length|array buffer allocation failed|out of memory|allocation failed|memory/i.test(raw)) {
+      return `หน่วยความจำ Browser ไม่เพียงพอสำหรับอ่าน Workbook นี้ (${((Number(fileSize) || 0) / MIB).toFixed(0)} MB) ระบบลองทั้ง Dense และ Sparse mode แล้ว แต่ XLSX ต้องแตกข้อมูลทั้งหมดใน RAM กรุณาปิดโปรแกรมอื่น ลอง Chrome 64-bit หรือ Export จาก Oracle เป็น CSV/แบ่งไฟล์`;
+    }
+    return raw || "ไม่สามารถอ่าน Workbook ได้";
+  }
+
   function isMeaningfulCell(cell) {
     if (!cell || typeof cell !== "object") return false;
     return cell.f !== undefined || (cell.v !== undefined && cell.v !== null && cell.v !== "");
@@ -474,6 +528,8 @@
   return {
     basename,
     sanitizeFilename,
+    getLargeFilePolicy,
+    explainWorkbookReadError,
     isMeaningfulCell,
     inspectSheet,
     analyzeWorkbook,

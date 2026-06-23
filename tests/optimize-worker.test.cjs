@@ -56,6 +56,45 @@ async function send(data) {
   assert.equal(analysis.analysis.total.rows, 4);
   assert.equal(analysis.analysis.total.cells, 16);
 
+  // จำลอง Dense mode ล้มด้วย Invalid array length และยืนยันว่า Worker fallback เป็น Sparse
+  const originalRead = XLSX.read;
+  const denseAttempts = [];
+  XLSX.read = (buffer, options) => {
+    denseAttempts.push(options.dense);
+    if (options.dense) throw new RangeError("Invalid array length");
+    return originalRead(buffer, options);
+  };
+  try {
+    result = await send({
+      action: "analyze",
+      buffer: toArrayBuffer(source),
+      fileName: "oracle-large.xlsx",
+      fileSize: source.length,
+    });
+    assert.ok(result.find((message) => message.type === "analysis"));
+    assert.deepEqual(denseAttempts.slice(0, 2), [true, false]);
+  } finally {
+    XLSX.read = originalRead;
+  }
+
+  const largeAttempts = [];
+  XLSX.read = (buffer, options) => {
+    largeAttempts.push(options.dense);
+    return originalRead(buffer, options);
+  };
+  try {
+    result = await send({
+      action: "analyze",
+      buffer: toArrayBuffer(source),
+      fileName: "oracle-120mb.xlsx",
+      fileSize: 120 * 1024 * 1024,
+    });
+    assert.ok(result.find((message) => message.type === "analysis"));
+    assert.equal(largeAttempts[0], false);
+  } finally {
+    XLSX.read = originalRead;
+  }
+
   result = await send({
     action: "optimize",
     buffer: toArrayBuffer(source),

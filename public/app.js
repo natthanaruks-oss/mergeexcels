@@ -101,14 +101,14 @@
       kind: "excel",
       eyebrow: "OPTIMIZE EXCEL",
       title: "ลดขนาดและแบ่งไฟล์ Excel ขนาดใหญ่",
-      description: "เหมาะกับ Oracle Export — วิเคราะห์และสร้างไฟล์ใหม่ใน Web Worker โดยไม่แสดงข้อมูลหลายหมื่นแถวบนหน้าจอ",
+      description: "เหมาะกับ Oracle Export — วิเคราะห์และสร้างไฟล์ใหม่ใน Web Worker โดยไม่แสดงข้อมูลหลายหมื่นแถวบนหน้าจอ · แนะนำไฟล์ไม่เกิน 250 MB",
       button: "เริ่ม Optimize Excel",
       output: "optimized_file.xlsx",
       extension: "xlsx",
       multiple: false,
       deferParse: true,
       dropTitle: "เลือก Excel 1 ไฟล์ที่ต้องการลดขนาด",
-      dropHint: "รองรับ .xlsx, .xls, .xlsm และ .xlsb · ผลลัพธ์เป็น XLSX, CSV หรือ ZIP",
+      dropHint: "รองรับ .xlsx, .xls, .xlsm และ .xlsb · 80–250 MB อาจใช้เวลาหลายนาที · มากกว่า 512 MB ต้องแบ่งไฟล์/Export CSV",
       unitLabel: "Sheet",
     },
   };
@@ -124,6 +124,7 @@
     pdfjsDocs: new Map(),
     thumbCache: new Map(),
     optimizeAnalysis: null,
+    optimizeAnalysisError: "",
     optimizeReport: null,
     optimizeWorker: null,
     optimizeReject: null,
@@ -318,9 +319,11 @@
   }
 
   function runOptimizeWorker(action, file, options = {}) {
+    const policy = OptimizeOps.getLargeFilePolicy(file && file.size);
+    if (policy.blocked) return Promise.reject(new Error(policy.message));
     terminateOptimizeWorker();
     const jobId = state.optimizeJobId;
-    const worker = new Worker(`./optimize-worker.js?v=3.3.2`);
+    const worker = new Worker(`./optimize-worker.js?v=3.3.4`);
     state.optimizeWorker = worker;
 
     return new Promise(async (resolve, reject) => {
@@ -368,12 +371,15 @@
   async function analyzeOptimizeFile(file) {
     state.busy = true;
     state.optimizeAnalysis = null;
+    state.optimizeAnalysisError = "";
     state.optimizeReport = null;
     els.analysisPanel.classList.add("hidden");
     els.integrityPanel.classList.add("hidden");
     els.cancelButton.classList.remove("hidden");
     renderFiles();
     try {
+      const policy = OptimizeOps.getLargeFilePolicy(file.size);
+      if (policy.message) setStatus(policy.message, policy.level === "extreme" ? "error" : "working", 3);
       const result = await runOptimizeWorker("analyze", file);
       state.optimizeAnalysis = result.analysis;
       if (state.parsed[0]) state.parsed[0].unitCount = result.analysis.total.sheets;
@@ -477,6 +483,7 @@
     state.files = [];
     state.parsed = [];
     state.optimizeAnalysis = null;
+    state.optimizeAnalysisError = "";
     state.optimizeReport = null;
     clearPdfState();
     els.fileInput.value = "";
@@ -581,6 +588,7 @@
       state.files = files;
       state.parsed = parsed;
       state.optimizeAnalysis = null;
+      state.optimizeAnalysisError = "";
       state.optimizeReport = null;
       clearPdfState();
       if (state.mode === "mergePdf") buildPdfPages();
@@ -599,6 +607,19 @@
         els.cancelButton.classList.add("hidden");
         renderFiles();
         setStatus("ยกเลิกการวิเคราะห์แล้ว", "idle", 0);
+      } else if (state.mode === "optimizeExcel" && state.files.length === 1) {
+        // คง File object ไว้ในหน้าจอเพื่อให้ผู้ใช้เห็นชื่อ/ขนาดและอ่านข้อความผิดพลาด
+        // ไม่ Reset จนไฟล์หายเหมือนเวอร์ชันก่อน
+        terminateOptimizeWorker();
+        state.busy = false;
+        state.optimizeAnalysis = null;
+        state.optimizeAnalysisError = error.message || "ไม่สามารถวิเคราะห์ไฟล์ได้";
+        els.cancelButton.classList.add("hidden");
+        els.optimizeWarning.textContent = state.optimizeAnalysisError;
+        els.optimizeWarning.classList.remove("hidden");
+        els.optimizeWarning.classList.add("danger");
+        renderFiles();
+        setStatus(state.optimizeAnalysisError, "error", 0);
       } else {
         resetFiles();
         setStatus(error.message || "ไม่สามารถอ่านไฟล์ได้", "error", 0);
@@ -624,7 +645,7 @@
       row.dataset.index = index;
       row.draggable = reorderable;
       const unitText = state.mode === "optimizeExcel" && !state.optimizeAnalysis
-        ? "รอวิเคราะห์"
+        ? (state.optimizeAnalysisError ? "วิเคราะห์ไม่สำเร็จ" : "รอวิเคราะห์")
         : config.kind === "pdf" ? `${item.unitCount} หน้า` : `${item.unitCount} Sheet`;
       const orderBadge = reorderable ? `<span class="file-order">${index + 1}</span>` : "";
       const moveControls = reorderable
@@ -797,7 +818,9 @@
     }
     if (state.mode === "optimizeExcel") {
       state.optimizeAnalysis = null;
+      state.optimizeAnalysisError = "";
       state.optimizeReport = null;
+      els.fileInput.value = "";
       els.analysisPanel.classList.add("hidden");
       els.integrityPanel.classList.add("hidden");
     }

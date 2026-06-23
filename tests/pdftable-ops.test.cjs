@@ -86,3 +86,24 @@ assert.equal(m.length, 3, "non-amount table unchanged, got " + m.length);
 console.log("✅ 9 non-amount table untouched");
 
 console.log("ALL PDF-TABLE TESTS PASSED");
+
+// 10) detached nikhahit from PDF must be reattached to nearby า as สระอำ
+// Simulates PDF.js returning the whole word as one item and a zero-width \u0E4D glyph above it.
+const brokenSaraAm = "งานบารุงตามกาหนดเวลา";
+const baseX = 10;
+const baseW = brokenSaraAm.length * 8;
+const markAt = (charIndex) => ({
+  str: "\u0E4D",
+  x: baseX + (baseW / brokenSaraAm.length) * (charIndex + 0.15),
+  y: 61,
+  w: 0,
+  h: 4,
+});
+m = T.buildMatrixFromItems([
+  { str: brokenSaraAm, x: baseX, y: 50, w: baseW, h: 10 },
+  markAt(brokenSaraAm.indexOf("บา") + 1),
+  markAt(brokenSaraAm.indexOf("กา") + 1),
+]);
+assert.equal(m[0][0], "งานบำรุงตามกำหนดเวลา", "detached sara-am repair, got " + m[0][0]);
+assert.ok(!m.flat().join(" ").includes("\u0E4D"), "detached nikhahit must not remain as stray cell");
+console.log("✅ 10 detached sara-am glyph repaired");

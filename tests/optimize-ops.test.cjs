@@ -97,4 +97,17 @@ function makeWorkbook() {
   assert.equal(split.stats.repeatedHeaderRows, 1);
 }
 
+{
+  const medium = OptimizeOps.getLargeFilePolicy(120 * 1024 * 1024);
+  assert.equal(medium.blocked, false);
+  assert.equal(medium.level, "high");
+
+  const huge = OptimizeOps.getLargeFilePolicy(700 * 1024 * 1024);
+  assert.equal(huge.blocked, true);
+  assert.match(huge.message, /512 MB/);
+
+  const explained = OptimizeOps.explainWorkbookReadError(new RangeError("Invalid array length"), 120 * 1024 * 1024);
+  assert.match(explained, /หน่วยความจำ Browser/);
+}
+
 console.log("OptimizeOps tests passed.");
