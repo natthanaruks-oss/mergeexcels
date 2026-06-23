@@ -21,6 +21,12 @@
   var RE_DIST = altRe("อ", DISTRICTS);
   var RE_SUB  = altRe("ต", SUBDISTRICTS);
 
+  // คำว่า “ตอน” ในชื่อช่วงทางมักถูก PDF.js ดึงมาติดกับชื่อสถานที่
+  // เช่น “ตอนเงินฝอยทอง” หรือ “ทล. 42 ตอนนาจวก”
+  // จับเฉพาะ “ตอน” ที่อยู่ต้นข้อความหรือมี boundary นำหน้า เพื่อไม่แก้คำอย่าง “ขั้นตอน”/“สะตอน”
+  // และยกเว้นคำทั่วไป เช่น “ตอนที่” และ “ตอนนี้” ซึ่งไม่ใช่ชื่อช่วงทาง
+  var RE_SECTION_AFTER = /(^|[^\u0E00-\u0E7FA-Za-z])ตอน(?!ที่|นี้|ละ|แรก|ท้าย|ต้น|ปลาย|กลาง|ก่อน|หลัง)(?=[\u0E00-\u0E7FA-Za-z0-9])/g;
+
   function applyRoad(text) {
     var s = String(text == null ? "" : text);
     for (var i = 0; i < SPELLING.length; i += 1)
@@ -30,6 +36,7 @@
     for (var k = 0; k < ABBREV.length; k += 1)
       if (s.indexOf(ABBREV[k][0]) !== -1) s = s.split(ABBREV[k][0]).join(ABBREV[k][1]);
     s = s.replace(RE_PROV, "$1 $2$3").replace(RE_DIST, "$1 $2$3").replace(RE_SUB, "$1 $2$3");
+    s = s.replace(RE_SECTION_AFTER, "$1ตอน ");
     return s.replace(/[ \t]+/g, " ").trim();
   }
   return { applyRoad: applyRoad, SPELLING: SPELLING, REGEX_REPLACE: REGEX_REPLACE, ABBREV: ABBREV, PROVINCES: PROVINCES, DISTRICTS: DISTRICTS, SUBDISTRICTS: SUBDISTRICTS };

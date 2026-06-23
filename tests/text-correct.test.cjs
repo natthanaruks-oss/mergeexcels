@@ -32,15 +32,29 @@ console.log("✅ 7 risky rule off");
 
 // 8) road pack: glued จ.<province> gets a space (validated by gazetteer)
 const RC = require("../public/thai-roads-config.js");
-assert.equal(RC.applyRoad("ตอนเชียงม่วนจ.พะเยา"), "ตอนเชียงม่วน จ.พะเยา");
+assert.equal(RC.applyRoad("ตอนเชียงม่วนจ.พะเยา"), "ตอน เชียงม่วน จ.พะเยา");
 assert.equal(RC.applyRoad("บางเสด็จจ.พระนครศรีอยุธยา"), "บางเสด็จ จ.พระนครศรีอยุธยา");
-assert.equal(RC.applyRoad("ตอนบ้านถำอ.เชียงคำ"), "ตอนบ้านถำ อ.เชียงคำ");
+assert.equal(RC.applyRoad("ตอนบ้านถำอ.เชียงคำ"), "ตอน บ้านถำ อ.เชียงคำ");
 assert.equal(RC.applyRoad("ผิวทางต.บางพระ"), "ผิวทาง ต.บางพระ");
 assert.equal(RC.applyRoad("งานสะพานอ.เชียงคำ"), "งานสะพาน อ.เชียงคำ");
 assert.equal(RC.applyRoad("ปรับปรุงผิวทางต.บางพระ"), "ปรับปรุงผิวทาง ต.บางพระ");
-assert.equal(RC.applyRoad("ตอนพุนพินจ.สุราษฎร์ธานี"), "ตอนพุนพิน จ.สุราษฎร์ธานี");
+assert.equal(RC.applyRoad("ตอนพุนพินจ.สุราษฎร์ธานี"), "ตอน พุนพิน จ.สุราษฎร์ธานี");
 assert.equal(RC.PROVINCES.length, 77, "province gazetteer must contain 77 entries");
 assert.ok(RC.PROVINCES.includes("สุราษฎร์ธานี"), "canonical Surat Thani spelling missing");
 console.log("✅ 8 road: จ./อ./ต. gazetteer spacing");
+
+// 9) road segment marker: add one space after standalone “ตอน”
+assert.equal(
+  RC.applyRoad("ตอนเงินฝอยทอง - ทุ่งผักเบี้ย จ.นครสวรรค์ 1 แห่ง"),
+  "ตอน เงินฝอยทอง - ทุ่งผักเบี้ย จ.นครสวรรค์ 1 แห่ง"
+);
+assert.equal(RC.applyRoad("ทล. 42 ตอนนาจวก-ดอนยาง"), "ทล. 42 ตอน นาจวก-ดอนยาง");
+assert.equal(TC.correctThai("ตอนเงินฝอยทอง - ทุ่งผักเบี้ย", { roadPack: true }), "ตอน เงินฝอยทอง - ทุ่งผักเบี้ย");
+assert.equal(RC.applyRoad("ตอน 2 อ.วังยาง"), "ตอน 2 อ.วังยาง");
+// Safety: do not split normal Thai words/phrases that merely contain “ตอน”
+assert.equal(RC.applyRoad("ขั้นตอนก่อสร้าง"), "ขั้นตอนก่อสร้าง");
+assert.equal(RC.applyRoad("ตอนที่ 2"), "ตอนที่ 2");
+assert.equal(RC.applyRoad("ตอนนี้พร้อมใช้งาน"), "ตอนนี้พร้อมใช้งาน");
+console.log("✅ 9 road: spacing after standalone ตอน");
 
 console.log("ALL TEXT-CORRECT TESTS PASSED");
