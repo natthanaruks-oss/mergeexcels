@@ -1,10 +1,10 @@
 {
   "name": "mergeexcels",
-  "version": "3.3.1",
+  "version": "3.3.2",
   "private": true,
   "description": "Browser-based Excel and PDF toolkit with large Excel optimization for Cloudflare Workers Static Assets",
   "engines": {
-    "node": ">=20"
+    "node": ">=22"
   },
   "scripts": {
     "vendor": "node scripts/copy-vendor.mjs",

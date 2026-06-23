@@ -320,7 +320,7 @@
   function runOptimizeWorker(action, file, options = {}) {
     terminateOptimizeWorker();
     const jobId = state.optimizeJobId;
-    const worker = new Worker(`./optimize-worker.js?v=3.3.1`);
+    const worker = new Worker(`./optimize-worker.js?v=3.3.2`);
     state.optimizeWorker = worker;
 
     return new Promise(async (resolve, reject) => {

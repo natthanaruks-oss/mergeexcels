@@ -49,8 +49,8 @@ if (!indexHtml.includes(`?v=${releaseVersion}`)) {
 }
 
 const nodeMajor = Number.parseInt(nodeVersion.trim(), 10);
-if (!Number.isFinite(nodeMajor) || nodeMajor < 20) {
-  throw new Error(".node-version ต้องเป็น Node.js 20 ขึ้นไป");
+if (!Number.isFinite(nodeMajor) || nodeMajor < 22) {
+  throw new Error(".node-version ต้องเป็น Node.js 22 ขึ้นไป");
 }
 if (/applied-caas-gateway|internal\.api\.openai\.org/i.test(packageLock)) {
   throw new Error("package-lock.json ยังมี internal registry ซึ่ง Cloudflare เข้าถึงไม่ได้");
