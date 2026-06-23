@@ -97,6 +97,20 @@
       dropHint: "แนะนำเลือกช่วงหน้าทีละไม่กี่หน้า เพราะ OCR ช้า",
       unitLabel: "หน้า",
     },
+    optimizeExcel: {
+      kind: "excel",
+      eyebrow: "OPTIMIZE EXCEL",
+      title: "ลดขนาดและแบ่งไฟล์ Excel ขนาดใหญ่",
+      description: "เหมาะกับ Oracle Export — วิเคราะห์และสร้างไฟล์ใหม่ใน Web Worker โดยไม่แสดงข้อมูลหลายหมื่นแถวบนหน้าจอ",
+      button: "เริ่ม Optimize Excel",
+      output: "optimized_file.xlsx",
+      extension: "xlsx",
+      multiple: false,
+      deferParse: true,
+      dropTitle: "เลือก Excel 1 ไฟล์ที่ต้องการลดขนาด",
+      dropHint: "รองรับ .xlsx, .xls, .xlsm และ .xlsb · ผลลัพธ์เป็น XLSX, CSV หรือ ZIP",
+      unitLabel: "Sheet",
+    },
   };
 
   const state = {
@@ -109,6 +123,11 @@
     renderToken: 0,
     pdfjsDocs: new Map(),
     thumbCache: new Map(),
+    optimizeAnalysis: null,
+    optimizeReport: null,
+    optimizeWorker: null,
+    optimizeReject: null,
+    optimizeJobId: 0,
   };
 
   const PDFJS = typeof window !== "undefined" ? window.pdfjsLib : null;
@@ -134,7 +153,28 @@
     combineOptions: document.getElementById("combineOptions"),
     useHeader: document.getElementById("useHeader"),
     addSourceColumns: document.getElementById("addSourceColumns"),
+    optimizeOptions: document.getElementById("optimizeOptions"),
+    optimizeMode: document.getElementById("optimizeMode"),
+    optimizeFormat: document.getElementById("optimizeFormat"),
+    removeComments: document.getElementById("removeComments"),
+    removeLinks: document.getElementById("removeLinks"),
+    removeMerges: document.getElementById("removeMerges"),
+    removeHiddenSheets: document.getElementById("removeHiddenSheets"),
+    splitLargeFile: document.getElementById("splitLargeFile"),
+    splitRowCount: document.getElementById("splitRowCount"),
+    splitSizeGroup: document.getElementById("splitSizeGroup"),
+    preserveHeader: document.getElementById("preserveHeader"),
+    preserveHeaderGroup: document.getElementById("preserveHeaderGroup"),
+    optimizeWarning: document.getElementById("optimizeWarning"),
+    analysisPanel: document.getElementById("analysisPanel"),
+    analysisRisk: document.getElementById("analysisRisk"),
+    analysisMetrics: document.getElementById("analysisMetrics"),
+    analysisSheets: document.getElementById("analysisSheets"),
+    integrityPanel: document.getElementById("integrityPanel"),
+    integrityStatus: document.getElementById("integrityStatus"),
+    integrityMetrics: document.getElementById("integrityMetrics"),
     processButton: document.getElementById("processButton"),
+    cancelButton: document.getElementById("cancelButton"),
     resetButton: document.getElementById("resetButton"),
     pageGrid: document.getElementById("pageGrid"),
     pageGridList: document.getElementById("pageGridList"),
@@ -159,12 +199,215 @@
     return `${(bytes / 1024 ** index).toFixed(index === 0 ? 0 : 1)} ${units[index]}`;
   }
 
+  function formatNumber(value) {
+    return new Intl.NumberFormat("th-TH").format(Number(value) || 0);
+  }
+
   function setStatus(message, type = "idle", progress = null) {
     els.statusText.textContent = message;
     els.statusBox.className = `status-box ${type === "idle" ? "" : type}`.trim();
     if (typeof progress === "number") {
       els.progressBar.style.width = `${Math.max(0, Math.min(100, progress))}%`;
     }
+  }
+
+  function updateOptimizeOptionState() {
+    if (!els.optimizeOptions) return;
+    const splitEnabled = !!els.splitLargeFile.checked;
+    els.splitRowCount.disabled = !splitEnabled;
+    els.preserveHeader.disabled = !splitEnabled;
+    els.splitSizeGroup.classList.toggle("disabled", !splitEnabled);
+    els.preserveHeaderGroup.classList.toggle("disabled", !splitEnabled);
+
+    if (state.mode !== "optimizeExcel") return;
+    const format = els.optimizeFormat.value;
+    const multipleCsv = format === "csv" && state.optimizeAnalysis && state.optimizeAnalysis.total.sheets > 1;
+    const extension = splitEnabled || multipleCsv ? "zip" : format;
+    const currentBase = String(els.outputName.value || "optimized_file").replace(/\.[^.]+$/, "");
+    els.outputName.value = `${currentBase || "optimized_file"}.${extension}`;
+
+    const warnings = [];
+    if (els.optimizeMode.value === "values") {
+      warnings.push("Values Only จะเปลี่ยน Formula เป็นค่าที่บันทึกอยู่ในไฟล์ และตัด Style/Chart/Image/Macro ออก");
+    } else {
+      warnings.push("Safe Optimize เก็บ Formula และ Number Format แต่ไม่รับประกัน Style, Chart, Image หรือ Macro ขั้นสูง");
+    }
+    if (format === "csv") warnings.push("CSV ไม่เก็บ Formula, รูปแบบ, Merge Cell หรือหลาย Sheet ในไฟล์เดียว");
+    if (splitEnabled) warnings.push("การแบ่งไฟล์จะยกเลิก Merge Cells และทำซ้ำ Header ในแต่ละ Part");
+    if (els.removeHiddenSheets.checked) warnings.push("Hidden Sheets จะถูกลบออกจากผลลัพธ์");
+    if (els.removeMerges.checked) warnings.push("Merge Cells จะถูกยกเลิก เหมาะกับ Raw Data เท่านั้น");
+    const risk = state.optimizeAnalysis && state.optimizeAnalysis.total.memoryRisk;
+    if (risk === "high") warnings.unshift("ไฟล์นี้ใช้หน่วยความจำสูงมาก แนะนำ Values Only + Split 50,000 Rows หรือ CSV");
+    else if (risk === "medium") warnings.unshift("ไฟล์มีข้อมูลจำนวนมาก แนะนำ Values Only และหลีกเลี่ยงการเปิด Preview");
+    els.optimizeWarning.textContent = warnings.join(" · ");
+    els.optimizeWarning.classList.remove("hidden");
+    els.optimizeWarning.classList.toggle("danger", els.removeHiddenSheets.checked || els.optimizeMode.value === "values" || risk === "high");
+  }
+
+  function metricCard(value, label, className = "") {
+    return `<div class="metric-card ${className}"><strong>${escapeHtml(value)}</strong><span>${escapeHtml(label)}</span></div>`;
+  }
+
+  function renderOptimizeAnalysis(analysis) {
+    if (!analysis) {
+      els.analysisPanel.classList.add("hidden");
+      return;
+    }
+    const total = analysis.total;
+    const risk = total.memoryRisk || "normal";
+    els.analysisRisk.textContent = risk === "high" ? "HIGH MEMORY" : risk === "medium" ? "MEDIUM" : "NORMAL";
+    els.analysisRisk.className = `risk-badge ${risk === "normal" ? "" : risk}`.trim();
+    els.analysisMetrics.innerHTML = [
+      metricCard(formatBytes(total.fileSize), "ขนาดไฟล์ต้นฉบับ"),
+      metricCard(formatNumber(total.sheets), "จำนวน Sheet"),
+      metricCard(formatNumber(total.rows), "แถวตามช่วงข้อมูลจริง"),
+      metricCard(formatNumber(total.cells), "เซลล์ที่มีข้อมูล"),
+      metricCard(formatNumber(total.formulas), "Formula Cells", total.formulas ? "warn" : "good"),
+      metricCard(formatNumber(total.comments + total.hyperlinks), "Comments + Links"),
+      metricCard(formatNumber(total.hiddenSheets), "Hidden Sheets", total.hiddenSheets ? "warn" : "good"),
+      metricCard(formatNumber(total.bloatedSheets), "Sheet ที่ Used Range บวม", total.bloatedSheets ? "bad" : "good"),
+    ].join("");
+
+    const rows = analysis.sheets.map((sheet) => `
+      <tr>
+        <td title="${escapeHtml(sheet.name)}">${escapeHtml(sheet.name)}${sheet.hidden ? " · Hidden" : ""}</td>
+        <td>${formatNumber(sheet.actualRows)}</td>
+        <td>${formatNumber(sheet.actualCols)}</td>
+        <td>${formatNumber(sheet.nonEmptyCells)}</td>
+        <td>${formatNumber(sheet.formulaCells)}</td>
+        <td class="${sheet.bloatedRange ? "bloat" : ""}">${escapeHtml(sheet.declaredRange || "-")}</td>
+        <td>${escapeHtml(sheet.actualRange || "-")}</td>
+      </tr>`).join("");
+    els.analysisSheets.innerHTML = `
+      <table>
+        <thead><tr><th>Sheet</th><th>Rows</th><th>Cols</th><th>Data Cells</th><th>Formula</th><th>Declared Range</th><th>Actual Range</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>`;
+    els.analysisPanel.classList.remove("hidden");
+
+    updateOptimizeOptionState();
+    if (risk === "high") els.optimizeWarning.classList.add("danger");
+  }
+
+  function renderIntegrityReport(report) {
+    if (!report) {
+      els.integrityPanel.classList.add("hidden");
+      return;
+    }
+    const integrity = report.integrity || {};
+    const passed = integrity.cellsMatch;
+    els.integrityStatus.textContent = passed ? "DATA MATCH" : "REVIEW";
+    els.integrityStatus.className = `risk-badge ${passed ? "pass" : "fail"}`;
+    const reduction = typeof report.reductionPercent === "number"
+      ? `${report.reductionPercent >= 0 ? "−" : "+"}${Math.abs(report.reductionPercent).toFixed(1)}%`
+      : "-";
+    const formulasLabel = els.optimizeMode.value === "values" ? "Formula → Values" : "Formula คงเหลือ";
+    els.integrityMetrics.innerHTML = [
+      metricCard(formatNumber(report.before && report.before.sheets), "Source Sheets"),
+      metricCard(formatNumber(report.before && report.before.rows), "Source Rows"),
+      metricCard(formatNumber(integrity.sourceCells), "Source Cells (Output Scope)"),
+      metricCard(formatNumber(integrity.copiedSourceCells), "Copied Data Cells", passed ? "good" : "bad"),
+      metricCard(formatBytes(report.outputSize), "ขนาดผลลัพธ์"),
+      metricCard(reduction, "Size Reduction", report.reductionPercent >= 0 ? "good" : "warn"),
+      metricCard(formatNumber(report.outputParts || 1), "จำนวนไฟล์ผลลัพธ์"),
+      metricCard(`${formatNumber(integrity.formulasOutput)} / ${formatNumber(integrity.formulasExpected)}`, formulasLabel),
+      metricCard(formatNumber(report.stats.commentsRemoved || 0), "Comments Removed"),
+      metricCard(formatNumber(report.stats.hiddenSheetsRemoved || 0), "Hidden Sheets Removed"),
+    ].join("");
+    els.integrityPanel.classList.remove("hidden");
+  }
+
+  function runOptimizeWorker(action, file, options = {}) {
+    terminateOptimizeWorker();
+    const jobId = state.optimizeJobId;
+    const worker = new Worker(`./optimize-worker.js?v=3.3.0`);
+    state.optimizeWorker = worker;
+
+    return new Promise(async (resolve, reject) => {
+      state.optimizeReject = reject;
+      worker.onmessage = (event) => {
+        if (jobId !== state.optimizeJobId) return;
+        const message = event.data || {};
+        if (message.type === "progress") {
+          setStatus(message.message || "กำลังประมวลผล...", "working", message.progress);
+          return;
+        }
+        if (message.type === "error") {
+          state.optimizeReject = null;
+          state.optimizeWorker = null;
+          worker.terminate();
+          reject(new Error(message.message || "ไม่สามารถประมวลผลไฟล์ได้"));
+          return;
+        }
+        if (message.type === "analysis" || message.type === "result") {
+          state.optimizeReject = null;
+          state.optimizeWorker = null;
+          worker.terminate();
+          resolve(message);
+        }
+      };
+      worker.onerror = (event) => {
+        state.optimizeReject = null;
+        state.optimizeWorker = null;
+        worker.terminate();
+        reject(new Error(event.message || "Web Worker ทำงานผิดพลาด"));
+      };
+
+      try {
+        const buffer = await file.arrayBuffer();
+        worker.postMessage({ action, buffer, fileName: file.name, fileSize: file.size, options }, [buffer]);
+      } catch (error) {
+        state.optimizeReject = null;
+        state.optimizeWorker = null;
+        worker.terminate();
+        reject(error);
+      }
+    });
+  }
+
+  async function analyzeOptimizeFile(file) {
+    state.busy = true;
+    state.optimizeAnalysis = null;
+    state.optimizeReport = null;
+    els.analysisPanel.classList.add("hidden");
+    els.integrityPanel.classList.add("hidden");
+    els.cancelButton.classList.remove("hidden");
+    renderFiles();
+    try {
+      const result = await runOptimizeWorker("analyze", file);
+      state.optimizeAnalysis = result.analysis;
+      if (state.parsed[0]) state.parsed[0].unitCount = result.analysis.total.sheets;
+      renderOptimizeAnalysis(result.analysis);
+      setStatus("วิเคราะห์ไฟล์เรียบร้อย เลือกตัวเลือกแล้วเริ่ม Optimize ได้", "success", 100);
+    } finally {
+      state.busy = false;
+      els.cancelButton.classList.add("hidden");
+      renderFiles();
+    }
+  }
+
+  function getOptimizeOptions() {
+    return {
+      mode: els.optimizeMode.value,
+      outputFormat: els.optimizeFormat.value,
+      removeComments: els.removeComments.checked,
+      removeLinks: els.removeLinks.checked,
+      removeMerges: els.removeMerges.checked,
+      removeHiddenSheets: els.removeHiddenSheets.checked,
+      splitEnabled: els.splitLargeFile.checked,
+      chunkSize: Number(els.splitRowCount.value) || 50000,
+      preserveHeader: els.preserveHeader.checked,
+    };
+  }
+
+  function cancelOptimizeJob() {
+    if (!state.optimizeWorker) return;
+    terminateOptimizeWorker("ยกเลิกการประมวลผลแล้ว");
+    state.busy = false;
+    els.cancelButton.classList.add("hidden");
+    els.processButton.textContent = currentConfig().button;
+    renderFiles();
+    setStatus("ยกเลิกการประมวลผลแล้ว ไฟล์ต้นฉบับไม่ได้ถูกแก้ไข", "idle", 0);
   }
 
   function ensureExtension(name, extension) {
@@ -206,19 +449,40 @@
     els.dropHint.textContent = config.dropHint;
     els.unitLabel.textContent = config.unitLabel;
     els.combineOptions.classList.toggle("hidden", mode !== "combineExcel");
-    const usesExcelTheme = mode === "pdf2excel" || mode === "ocr2excel";
-    document.body.classList.toggle("pdf-mode", config.kind === "pdf" && !usesExcelTheme);
-    els.pageRangePanel.classList.toggle("hidden", !usesExcelTheme);
-    if (!usesExcelTheme) { els.pageStart.value = ""; els.pageEnd.value = ""; }
+    els.optimizeOptions.classList.toggle("hidden", mode !== "optimizeExcel");
+    const usesPageRange = mode === "pdf2excel" || mode === "ocr2excel";
+    document.body.classList.toggle("pdf-mode", config.kind === "pdf" && !usesPageRange);
+    els.pageRangePanel.classList.toggle("hidden", !usesPageRange);
+    if (!usesPageRange) { els.pageStart.value = ""; els.pageEnd.value = ""; }
+    updateOptimizeOptionState();
 
     resetFiles();
   }
 
+  function terminateOptimizeWorker(reason = "") {
+    if (state.optimizeWorker) {
+      state.optimizeWorker.terminate();
+      state.optimizeWorker = null;
+    }
+    const rejectPending = state.optimizeReject;
+    state.optimizeReject = null;
+    state.optimizeJobId += 1;
+    if (reason && rejectPending) rejectPending(new Error(reason));
+  }
+
   function resetFiles() {
+    const hadWorker = !!state.optimizeWorker;
+    terminateOptimizeWorker(hadWorker ? "ยกเลิกการประมวลผลแล้ว" : "");
+    state.busy = false;
     state.files = [];
     state.parsed = [];
+    state.optimizeAnalysis = null;
+    state.optimizeReport = null;
     clearPdfState();
     els.fileInput.value = "";
+    els.analysisPanel.classList.add("hidden");
+    els.integrityPanel.classList.add("hidden");
+    els.cancelButton.classList.add("hidden");
     renderFiles();
     setStatus("พร้อมใช้งาน", "idle", 0);
   }
@@ -242,6 +506,7 @@
       throw new Error(config.kind === "pdf" ? "กรุณาเลือกไฟล์ PDF" : "กรุณาเลือกไฟล์ Excel ที่รองรับ");
     }
     if (!config.multiple && valid.length !== 1) {
+      if (state.mode === "optimizeExcel") throw new Error("Optimize Excel รองรับครั้งละ 1 ไฟล์เท่านั้น");
       throw new Error(config.kind === "pdf" ? "Split PDF รองรับครั้งละ 1 ไฟล์เท่านั้น" : "Split File รองรับครั้งละ 1 ไฟล์เท่านั้น");
     }
     return valid;
@@ -301,6 +566,9 @@
 
   async function parseFiles(files) {
     setStatus("กำลังอ่านไฟล์...", "working", 5);
+    if (currentConfig().deferParse) {
+      return files.map((file) => ({ name: file.name, file, unitCount: 0 }));
+    }
     return currentConfig().kind === "pdf" ? parsePdfFiles(files) : parseExcelFiles(files);
   }
 
@@ -312,13 +580,29 @@
       const parsed = await parseFiles(files);
       state.files = files;
       state.parsed = parsed;
+      state.optimizeAnalysis = null;
+      state.optimizeReport = null;
       clearPdfState();
       if (state.mode === "mergePdf") buildPdfPages();
       renderFiles();
-      setStatus("อ่านไฟล์เรียบร้อย พร้อมประมวลผล", "success", 0);
+
+      if (state.mode === "optimizeExcel") {
+        els.outputName.value = `${ExcelOps.basename(files[0].name)}_optimized.xlsx`;
+        updateOptimizeOptionState();
+        await analyzeOptimizeFile(files[0]);
+      } else {
+        setStatus("อ่านไฟล์เรียบร้อย พร้อมประมวลผล", "success", 0);
+      }
     } catch (error) {
-      resetFiles();
-      setStatus(error.message || "ไม่สามารถอ่านไฟล์ได้", "error", 0);
+      if (/ยกเลิก/.test(String(error && error.message))) {
+        state.busy = false;
+        els.cancelButton.classList.add("hidden");
+        renderFiles();
+        setStatus("ยกเลิกการวิเคราะห์แล้ว", "idle", 0);
+      } else {
+        resetFiles();
+        setStatus(error.message || "ไม่สามารถอ่านไฟล์ได้", "error", 0);
+      }
     }
   }
 
@@ -339,7 +623,9 @@
       row.className = reorderable ? "file-item reorderable" : "file-item";
       row.dataset.index = index;
       row.draggable = reorderable;
-      const unitText = config.kind === "pdf" ? `${item.unitCount} หน้า` : `${item.unitCount} Sheet`;
+      const unitText = state.mode === "optimizeExcel" && !state.optimizeAnalysis
+        ? "รอวิเคราะห์"
+        : config.kind === "pdf" ? `${item.unitCount} หน้า` : `${item.unitCount} Sheet`;
       const orderBadge = reorderable ? `<span class="file-order">${index + 1}</span>` : "";
       const moveControls = reorderable
         ? `<div class="file-move">
@@ -364,6 +650,8 @@
     let ready;
     if (state.mode === "mergePdf") {
       ready = state.pages.length >= 1;
+    } else if (state.mode === "optimizeExcel") {
+      ready = state.parsed.length === 1 && !!state.optimizeAnalysis;
     } else {
       ready = state.parsed.length >= (config.minimumFiles || 1);
     }
@@ -506,6 +794,12 @@
     if (state.mode === "mergePdf" && removed) {
       state.pages = state.pages.filter((p) => p.ref !== removed);
       state.renderToken += 1;
+    }
+    if (state.mode === "optimizeExcel") {
+      state.optimizeAnalysis = null;
+      state.optimizeReport = null;
+      els.analysisPanel.classList.add("hidden");
+      els.integrityPanel.classList.add("hidden");
     }
     renderFiles();
     setStatus(state.parsed.length ? "พร้อมประมวลผล" : "พร้อมใช้งาน", "idle", 0);
@@ -740,16 +1034,42 @@
     return `OCR ${planned} หน้าเป็น ${workbook.SheetNames.length} Sheet ใน ${outputName} (โปรดตรวจทานความถูกต้อง)`;
   }
 
+  async function processOptimizeExcel() {
+    const file = state.files[0];
+    if (!file || !state.optimizeAnalysis) throw new Error("กรุณาเลือกและรอวิเคราะห์ไฟล์ Excel ก่อน");
+
+    const options = getOptimizeOptions();
+    state.optimizeReport = null;
+    els.integrityPanel.classList.add("hidden");
+    const result = await runOptimizeWorker("optimize", file, options);
+    const extension = String(result.fileName || "output.xlsx").split(".").pop().toLowerCase();
+    const requestedBase = String(els.outputName.value || "optimized_file").replace(/\.[^.]+$/, "").trim() || "optimized_file";
+    const outputName = `${requestedBase}.${extension}`;
+    downloadBlob(new Blob([result.buffer], { type: result.mime || "application/octet-stream" }), outputName);
+    state.optimizeReport = result.report;
+    renderIntegrityReport(result.report);
+
+    const reduction = typeof result.report.reductionPercent === "number"
+      ? ` ลดขนาด ${result.report.reductionPercent.toFixed(1)}%`
+      : "";
+    const integrityText = result.report.integrity && result.report.integrity.cellsMatch
+      ? "Data Cells ครบ"
+      : "กรุณาตรวจ Integrity Report";
+    return `สร้าง ${outputName} เรียบร้อย · ${integrityText}${reduction}`;
+  }
+
   async function processFiles() {
     const config = currentConfig();
-    const ready =
-      state.mode === "mergePdf"
-        ? state.pages.length >= 1
+    const ready = state.mode === "mergePdf"
+      ? state.pages.length >= 1
+      : state.mode === "optimizeExcel"
+        ? state.parsed.length === 1 && !!state.optimizeAnalysis
         : state.parsed.length >= (config.minimumFiles || 1);
     if (state.busy || !ready) return;
     state.busy = true;
     renderFiles();
     els.processButton.textContent = "กำลังประมวลผล...";
+    els.cancelButton.classList.toggle("hidden", state.mode !== "optimizeExcel");
 
     try {
       let message;
@@ -758,14 +1078,20 @@
       else if (state.mode === "splitExcel") message = await processSplitExcel();
       else if (state.mode === "pdf2excel") message = await processPdf2Excel();
       else if (state.mode === "ocr2excel") message = await processOcr2Excel();
+      else if (state.mode === "optimizeExcel") message = await processOptimizeExcel();
       else if (state.mode === "mergePdf") message = await processMergePdf();
       else message = await processSplitPdf();
       setStatus(message, "success", 100);
     } catch (error) {
       console.error(error);
-      setStatus(error.message || "เกิดข้อผิดพลาดระหว่างประมวลผล", "error", 0);
+      if (/ยกเลิก/.test(String(error && error.message))) {
+        setStatus("ยกเลิกการประมวลผลแล้ว ไฟล์ต้นฉบับไม่ได้ถูกแก้ไข", "idle", 0);
+      } else {
+        setStatus(error.message || "เกิดข้อผิดพลาดระหว่างประมวลผล", "error", 0);
+      }
     } finally {
       state.busy = false;
+      els.cancelButton.classList.add("hidden");
       els.processButton.textContent = config.button;
       renderFiles();
     }
@@ -775,6 +1101,18 @@
   els.fileInput.addEventListener("change", (event) => addFiles(event.target.files));
   els.resetButton.addEventListener("click", resetFiles);
   els.processButton.addEventListener("click", processFiles);
+  els.cancelButton.addEventListener("click", cancelOptimizeJob);
+  [
+    els.optimizeMode,
+    els.optimizeFormat,
+    els.removeComments,
+    els.removeLinks,
+    els.removeMerges,
+    els.removeHiddenSheets,
+    els.splitLargeFile,
+    els.splitRowCount,
+    els.preserveHeader,
+  ].forEach((control) => control.addEventListener("change", updateOptimizeOptionState));
   els.pageGridList.addEventListener("click", (event) => {
     const removeBtn = event.target.closest(".page-remove");
     if (removeBtn) { removePage(removeBtn.dataset.id); return; }

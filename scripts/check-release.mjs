@@ -17,19 +17,24 @@ const requiredFiles = [
   "public/vendor/pdf-lib.min.js",
   "public/vendor/pdf.min.js",
   "public/vendor/pdf.worker.min.js",
+  "public/optimize-ops.js",
+  "public/optimize-worker.js",
+  "tests/optimize-ops.test.cjs",
+  "tests/optimize-worker.test.cjs",
 ];
 
 for (const relativePath of requiredFiles) {
   await access(resolve(root, relativePath));
 }
 
-const [nodeVersion, packageJsonRaw, packageLock, wrangler, headers, app, indexHtml] = await Promise.all([
+const [nodeVersion, packageJsonRaw, packageLock, wrangler, headers, app, optimizeWorker, indexHtml] = await Promise.all([
   readFile(resolve(root, ".node-version"), "utf8"),
   readFile(resolve(root, "package.json"), "utf8"),
   readFile(resolve(root, "package-lock.json"), "utf8"),
   readFile(resolve(root, "wrangler.jsonc"), "utf8"),
   readFile(resolve(root, "public/_headers"), "utf8"),
   readFile(resolve(root, "public/app.js"), "utf8"),
+  readFile(resolve(root, "public/optimize-worker.js"), "utf8"),
   readFile(resolve(root, "public/index.html"), "utf8"),
 ]);
 
@@ -58,6 +63,12 @@ if (!/worker-src\s+'self'\s+blob:/.test(headers)) {
 }
 if (!/isEvalSupported\s*:\s*false/.test(app)) {
   throw new Error("PDF.js ต้องกำหนด isEvalSupported: false");
+}
+if (!app.includes(`optimize-worker.js?v=${releaseVersion}`)) {
+  throw new Error(`Optimize Worker cache-busting version ไม่ตรงกับ package.json (${releaseVersion})`);
+}
+if (!optimizeWorker.includes(`optimize-ops.js?v=${releaseVersion}`)) {
+  throw new Error(`Optimize Worker import version ไม่ตรงกับ package.json (${releaseVersion})`);
 }
 
 if (packageJson.dependencies?.xlsx === "0.18.5") {

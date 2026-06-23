@@ -5,23 +5,24 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="รวม ต่อ และแยกไฟล์ Excel และ PDF บนเบราว์เซอร์โดยไม่อัปโหลดไฟล์ขึ้นเซิร์ฟเวอร์" />
     <title>MergeExcels — Excel & PDF File Toolkit</title>
-    <link rel="stylesheet" href="./styles.css?v=3.2.0" />
-    <script defer src="./vendor/xlsx.full.min.js?v=3.2.0"></script>
-    <script defer src="./vendor/jszip.min.js?v=3.2.0"></script>
-    <script defer src="./vendor/pdf-lib.min.js?v=3.2.0"></script>
-    <script defer src="./vendor/pdf.min.js?v=3.2.0"></script>
-    <script defer src="./excel-ops.js?v=3.2.0"></script>
-    <script defer src="./pdf-ops.js?v=3.2.0"></script>
-    <script defer src="./thai-roads-config.js?v=3.2.0"></script>
-    <script defer src="./text-correct.js?v=3.2.0"></script>
-    <script defer src="./pdftable-ops.js?v=3.2.0"></script>
-    <script defer src="./app.js?v=3.2.0"></script>
+    <link rel="stylesheet" href="./styles.css?v=3.3.0" />
+    <script defer src="./vendor/xlsx.full.min.js?v=3.3.0"></script>
+    <script defer src="./vendor/jszip.min.js?v=3.3.0"></script>
+    <script defer src="./vendor/pdf-lib.min.js?v=3.3.0"></script>
+    <script defer src="./vendor/pdf.min.js?v=3.3.0"></script>
+    <script defer src="./excel-ops.js?v=3.3.0"></script>
+    <script defer src="./pdf-ops.js?v=3.3.0"></script>
+    <script defer src="./thai-roads-config.js?v=3.3.0"></script>
+    <script defer src="./text-correct.js?v=3.3.0"></script>
+    <script defer src="./pdftable-ops.js?v=3.3.0"></script>
+    <script defer src="./optimize-ops.js?v=3.3.0"></script>
+    <script defer src="./app.js?v=3.3.0"></script>
   </head>
   <body>
     <header class="site-header">
       <div class="brand-mark" aria-hidden="true">M</div>
       <div>
-        <div class="brand-title-row"><h1>MergeExcels</h1><span class="version-badge">v3.2.0</span></div>
+        <div class="brand-title-row"><h1>MergeExcels</h1><span class="version-badge">v3.3.0</span></div>
         <p>เครื่องมือรวม ต่อ และแยกไฟล์ Excel และ PDF โดยประมวลผลในเบราว์เซอร์</p>
       </div>
     </header>
@@ -76,6 +77,13 @@
           <strong>PDF สแกน → Excel</strong>
           <span>อ่านตัวอักษรจาก PDF ที่เป็นรูปภาพ/สแกน (ไทย+อังกฤษ)</span>
           <small>โหลด OCR ครั้งแรก ~7MB · ช้ากว่าปกติ</small>
+        </button>
+        <button class="mode-card optimize-card" type="button" data-mode="optimizeExcel" aria-pressed="false">
+          <span class="mode-number">08</span>
+          <span class="mode-type">EXCEL · OPTIMIZE</span>
+          <strong>Reduce Excel Size</strong>
+          <span>ลดขนาดและแบ่งไฟล์ Oracle Export โดยไม่ทำให้หน้าจอค้าง</span>
+          <small>Analyze · Values Only · Split Rows · CSV</small>
         </button>
       </section>
 
@@ -141,6 +149,101 @@
             </span>
           </label>
         </section>
+        <section id="optimizeOptions" class="options-panel optimize-panel hidden" aria-labelledby="optimizeOptionsTitle">
+          <div class="panel-heading">
+            <div>
+              <h3 id="optimizeOptionsTitle">ตัวเลือกลดขนาดไฟล์ Excel</h3>
+              <small>ประมวลผลใน Web Worker เพื่อให้หน้าเว็บยังตอบสนองระหว่างจัดการไฟล์ขนาดใหญ่</small>
+            </div>
+            <span class="local-badge">100% LOCAL</span>
+          </div>
+
+          <div class="optimize-grid">
+            <label class="field-group">
+              <span>Optimization Mode</span>
+              <select id="optimizeMode">
+                <option value="values" selected>Values Only — ลดได้มากที่สุด (แนะนำสำหรับ Oracle Raw Data)</option>
+                <option value="safe">Safe Optimize — เก็บ Formula และ Number Format</option>
+              </select>
+              <small>Values Only จะเปลี่ยน Formula เป็นค่าปัจจุบันและตัด Style ส่วนเกิน</small>
+            </label>
+            <label class="field-group">
+              <span>Output Format</span>
+              <select id="optimizeFormat">
+                <option value="xlsx" selected>XLSX — ใช้งานต่อใน Excel</option>
+                <option value="csv">CSV UTF-8 — เบาและเหมาะกับ Power BI/Database</option>
+              </select>
+              <small>หลาย Sheet จะถูกบรรจุเป็น ZIP เมื่อเลือก CSV</small>
+            </label>
+          </div>
+
+          <div class="option-check-grid">
+            <label class="check-row compact always-on">
+              <input type="checkbox" checked disabled />
+              <span><strong>Trim Used Range</strong><small>ตัดแถว/คอลัมน์ว่างท้ายข้อมูลอัตโนมัติ</small></span>
+            </label>
+            <label class="check-row compact">
+              <input id="removeComments" type="checkbox" checked />
+              <span><strong>ลบ Comments</strong><small>ลด Metadata ที่ไม่จำเป็น</small></span>
+            </label>
+            <label class="check-row compact">
+              <input id="removeLinks" type="checkbox" checked />
+              <span><strong>ลบ Hyperlinks</strong><small>ไม่แตะ Formula ที่อ้างอิงเซลล์</small></span>
+            </label>
+            <label class="check-row compact">
+              <input id="removeMerges" type="checkbox" />
+              <span><strong>ลบ Merge Cells</strong><small>เหมาะกับ Raw Data เท่านั้น</small></span>
+            </label>
+            <label class="check-row compact">
+              <input id="removeHiddenSheets" type="checkbox" />
+              <span><strong>ลบ Hidden Sheets</strong><small>เปิดเฉพาะเมื่อมั่นใจว่าไม่ใช้งาน</small></span>
+            </label>
+          </div>
+
+          <div class="split-row">
+            <label class="check-row compact split-toggle">
+              <input id="splitLargeFile" type="checkbox" />
+              <span><strong>แบ่งเป็นหลายไฟล์</strong><small>ทำซ้ำ Header และรวมผลลัพธ์ใน ZIP</small></span>
+            </label>
+            <label class="field-group split-size disabled" id="splitSizeGroup">
+              <span>จำนวนแถวต่อไฟล์</span>
+              <select id="splitRowCount" disabled>
+                <option value="25000">25,000 แถว</option>
+                <option value="50000" selected>50,000 แถว (แนะนำ)</option>
+                <option value="100000">100,000 แถว</option>
+              </select>
+            </label>
+            <label class="check-row compact preserve-header disabled" id="preserveHeaderGroup">
+              <input id="preserveHeader" type="checkbox" checked disabled />
+              <span><strong>ทำซ้ำ Header</strong><small>ใช้แถวข้อมูลแรกของแต่ละ Sheet</small></span>
+            </label>
+          </div>
+
+          <div id="optimizeWarning" class="optimize-warning hidden"></div>
+        </section>
+
+        <section id="analysisPanel" class="analysis-panel hidden" aria-labelledby="analysisTitle">
+          <div class="analysis-head">
+            <div>
+              <p class="eyebrow">FILE ANALYSIS</p>
+              <h3 id="analysisTitle">ผลวิเคราะห์ก่อน Optimize</h3>
+            </div>
+            <span id="analysisRisk" class="risk-badge">NORMAL</span>
+          </div>
+          <div id="analysisMetrics" class="metric-grid"></div>
+          <div id="analysisSheets" class="sheet-analysis"></div>
+        </section>
+
+        <section id="integrityPanel" class="analysis-panel integrity-panel hidden" aria-labelledby="integrityTitle">
+          <div class="analysis-head">
+            <div>
+              <p class="eyebrow">INTEGRITY REPORT</p>
+              <h3 id="integrityTitle">ผลตรวจสอบหลังประมวลผล</h3>
+            </div>
+            <span id="integrityStatus" class="risk-badge">CHECKING</span>
+          </div>
+          <div id="integrityMetrics" class="metric-grid"></div>
+        </section>
 
         <div class="output-row">
           <label for="outputName">ชื่อไฟล์ผลลัพธ์</label>
@@ -165,9 +268,12 @@
           <div id="progressBar" class="progress-bar"></div>
         </div>
 
-        <button id="processButton" class="primary-button" type="button" disabled>
-          เริ่ม Merge Files
-        </button>
+        <div class="action-row">
+          <button id="cancelButton" class="secondary-button hidden" type="button">ยกเลิกการประมวลผล</button>
+          <button id="processButton" class="primary-button" type="button" disabled>
+            เริ่ม Merge Files
+          </button>
+        </div>
       </section>
 
       <section class="notes">
@@ -203,12 +309,17 @@
             <strong>PDF to Excel</strong>
             <p>ดึงข้อความตามตำแหน่งบนหน้ากระดาษมาจัดเป็นแถว/คอลัมน์ใน Excel เหมาะกับ PDF ที่เป็นข้อความ (ไม่ใช่ไฟล์สแกน)</p>
           </article>
+          <article>
+            <span class="note-type optimize">EXCEL · OPTIMIZE</span>
+            <strong>Reduce Excel Size</strong>
+            <p>สร้างไฟล์ใหม่จากข้อมูลจริง ตัดช่วงว่างและ Metadata ส่วนเกิน พร้อมแบ่ง Oracle Export ตามจำนวนแถว</p>
+          </article>
         </div>
         <p class="privacy-note">ไฟล์ถูกประมวลผลบนเครื่องของคุณ ไม่ได้อัปโหลดไปยังเซิร์ฟเวอร์</p>
         <p class="limitation-note">Excel: Chart, รูปภาพ, Macro และฟีเจอร์ขั้นสูงบางอย่างอาจไม่ถูกเก็บไว้ · PDF: ไม่รองรับไฟล์ที่เข้ารหัสหรือมีรหัสผ่าน และลายเซ็นดิจิทัลอาจใช้ไม่ได้หลังแก้ไข</p>
       </section>
     </main>
 
-    <footer>MergeExcels v3.0 — Excel & PDF Toolkit</footer>
+    <footer>MergeExcels v3.3.0 — Excel & PDF Toolkit</footer>
   </body>
 </html>
