@@ -100,7 +100,7 @@ Cloudflare Build Settings:
 3. ลาก **ทุกไฟล์และโฟลเดอร์ที่อยู่ข้างใน** ขึ้น Repo เดิม
 4. ต้องเห็น `public/`, `package.json`, `package-lock.json`, `wrangler.jsonc` และ `.node-version` ที่หน้า Root
 5. Commit แล้วรอ Cloudflare Deploy อัตโนมัติ
-6. เปิดเว็บและตรวจ Version Badge ต้องเป็น `v3.3.4`
+6. เปิดเว็บและตรวจ Version Badge ต้องเป็น `v3.3.5`
 
 ## Security Notes
 

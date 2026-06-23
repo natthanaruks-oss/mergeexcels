@@ -236,15 +236,27 @@
 
     function finalize(matrix) {
       if (!matrix.length) return [[""]];
-      const colCount = matrix.reduce((mx, r) => Math.max(mx, r.length), 0);
+
+      // PDF บางไฟล์ใช้ฟอนต์แบบ custom CMap และส่งสระ/วรรณยุกต์ไทยออกมาเป็น
+      // text item แยกที่มีเฉพาะ combining marks เช่น "ุ", "็้", "ิุ์" โดยไม่มี
+      // พยัญชนะฐาน ข้อมูลเหล่านี้ไม่ใช่เซลล์จริงและทำให้เกิดคอลัมน์วงกลมแปลก ๆ
+      // ใน Excel จึงล้างเฉพาะเซลล์ที่ประกอบด้วย combining marks ล้วนเท่านั้น
+      // (ไม่แตะข้อความไทยปกติที่มีพยัญชนะฐาน)
+      const detachedMarksOnly = /^[\u0E31\u0E34-\u0E3A\u0E47-\u0E4E]+$/u;
+      const cleaned = matrix.map((row) => row.map((value) => {
+        const text = value == null ? "" : String(value).trim();
+        return detachedMarksOnly.test(text.replace(/\s+/g, "")) ? "" : value;
+      }));
+
+      const colCount = cleaned.reduce((mx, r) => Math.max(mx, r.length), 0);
       // keep only columns that have at least one non-empty cell (drops leading/interior/trailing empties)
       const keep = [];
       for (let c = 0; c < colCount; c += 1) {
-        const used = matrix.some((r) => r[c] != null && String(r[c]).trim() !== "");
+        const used = cleaned.some((r) => r[c] != null && String(r[c]).trim() !== "");
         if (used) keep.push(c);
       }
       if (!keep.length) keep.push(0);
-      return matrix.map((row) => keep.map((c) => (row[c] == null ? "" : row[c])));
+      return cleaned.map((row) => keep.map((c) => (row[c] == null ? "" : row[c])));
     }
   }
 

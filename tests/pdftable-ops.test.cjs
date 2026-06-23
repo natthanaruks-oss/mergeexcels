@@ -107,3 +107,13 @@ m = T.buildMatrixFromItems([
 assert.equal(m[0][0], "งานบำรุงตามกำหนดเวลา", "detached sara-am repair, got " + m[0][0]);
 assert.ok(!m.flat().join(" ").includes("\u0E4D"), "detached nikhahit must not remain as stray cell");
 console.log("✅ 10 detached sara-am glyph repaired");
+
+// 11) standalone Thai combining-mark items must not survive as separate Excel columns
+m = T.buildMatrixFromItems([
+  { str: "(2)งานบารุงตามกาหนดเวลาทล. 4", x: 10, y: 50, w: 210, h: 10 },
+  { str: "ุ", x: 360, y: 50, w: 0, h: 4 },
+  { str: "ิุ์", x: 440, y: 50, w: 0, h: 4 },
+], { roadPack: true });
+assert.equal(m[0][0], "(2)งานบำรุงตามกำหนดเวลาทล. 4", "road mark repair, got " + m[0][0]);
+assert.equal(m[0].length, 1, "standalone marks must not create extra columns");
+console.log("✅ 11 detached Thai mark-only cells removed + road words repaired");

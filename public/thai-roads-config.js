@@ -27,6 +27,63 @@
   // และยกเว้นคำทั่วไป เช่น “ตอนที่” และ “ตอนนี้” ซึ่งไม่ใช่ชื่อช่วงทาง
   var RE_SECTION_AFTER = /(^|[^\u0E00-\u0E7FA-Za-z])ตอน(?!ที่|นี้|ละ|แรก|ท้าย|ต้น|ปลาย|กลาง|ก่อน|หลัง)(?=[\u0E00-\u0E7FA-Za-z0-9])/g;
 
+  // PDF ราชการบางชุดใช้ custom font ที่ทำให้สระ/วรรณยุกต์หลุดจากพยัญชนะฐาน
+  // และแมป Unicode ผิด จึงไม่สามารถซ่อมด้วยการนำ glyph กลับมาต่อเพียงอย่างเดียว
+  // รายการนี้เป็นคำราชการ/งานถนนที่มีความหมายชัดเจนและพบซ้ำจำนวนมาก
+  // จำกัดไว้ใน Road Pack เท่านั้น เพื่อลดความเสี่ยงแก้เอกสารทั่วไปผิดบริบท
+  var MISSING_THAI_MARKS = [
+    [/บารุง/g, "บำรุง"],
+    [/กาหนด/g, "กำหนด"],
+    [/อานวย/g, "อำนวย"],
+    [/กาลัง/g, "กำลัง"],
+    [/ตารวจ/g, "ตำรวจ"],
+    [/ดาเนิน/g, "ดำเนิน"],
+    [/จานวน/g, "จำนวน"],
+    [/สานัก/g, "สำนัก"],
+    [/สาหรับ/g, "สำหรับ"],
+    [/สาคัญ/g, "สำคัญ"],
+    [/สารวจ/g, "สำรวจ"],
+    [/ชารุด/g, "ชำรุด"],
+    [/สาเร็จ/g, "สำเร็จ"],
+    [/คานวณ/g, "คำนวณ"],
+    [/ตาบล/g, "ตำบล"],
+    [/อาเภอ/g, "อำเภอ"],
+    [/กาแพงเพชร/g, "กำแพงเพชร"],
+    [/อานาจเจริญ/g, "อำนาจเจริญ"],
+    [/ต\s+่\s*ากว่า/g, "ต่ำกว่า"],
+    [/ต่ากว่า/g, "ต่ำกว่า"],
+    [/น\s+้\s*า/g, "น้ำ"],
+    [/ลาน้ำ(?=[\u0E00-\u0E7F])/g, "ลำน้ำ"],
+    [/ระบายน้ำ/g, "ระบายน้ำ"],
+  ];
+
+  // แก้ชื่อจังหวัดหลัง marker จ. โดยเทียบรูปที่ตัดสระ/วรรณยุกต์ออก
+  // เช่น จ.กาแพงเพชร -> จ.กำแพงเพชร โดยทำเฉพาะเมื่อ match ได้จังหวัดเดียว
+  function locationKey(value) {
+    return String(value == null ? "" : value)
+      .normalize("NFD")
+      .replace(/ำ/g, "า")
+      .replace(/[\u0E31\u0E34-\u0E3A\u0E47-\u0E4E]/g, "")
+      .replace(/\s+/g, "")
+      .toLowerCase();
+  }
+  var PROVINCE_BY_KEY = (function () {
+    var map = Object.create(null), duplicate = Object.create(null);
+    for (var i = 0; i < PROVINCES.length; i += 1) {
+      var key = locationKey(PROVINCES[i]);
+      if (map[key] && map[key] !== PROVINCES[i]) duplicate[key] = true;
+      else map[key] = PROVINCES[i];
+    }
+    for (var k in duplicate) delete map[k];
+    return map;
+  })();
+  function repairProvinceAfterMarker(text) {
+    return String(text).replace(/จ\.\s*([\u0E00-\u0E7F]+)/g, function (all, name) {
+      var canonical = PROVINCE_BY_KEY[locationKey(name)];
+      return canonical ? "จ." + canonical : all;
+    });
+  }
+
   function applyRoad(text) {
     var s = String(text == null ? "" : text);
     for (var i = 0; i < SPELLING.length; i += 1)
@@ -35,9 +92,12 @@
       s = s.replace(REGEX_REPLACE[j][0], REGEX_REPLACE[j][1]);
     for (var k = 0; k < ABBREV.length; k += 1)
       if (s.indexOf(ABBREV[k][0]) !== -1) s = s.split(ABBREV[k][0]).join(ABBREV[k][1]);
+    for (var m = 0; m < MISSING_THAI_MARKS.length; m += 1)
+      s = s.replace(MISSING_THAI_MARKS[m][0], MISSING_THAI_MARKS[m][1]);
+    s = repairProvinceAfterMarker(s);
     s = s.replace(RE_PROV, "$1 $2$3").replace(RE_DIST, "$1 $2$3").replace(RE_SUB, "$1 $2$3");
     s = s.replace(RE_SECTION_AFTER, "$1ตอน ");
     return s.replace(/[ \t]+/g, " ").trim();
   }
-  return { applyRoad: applyRoad, SPELLING: SPELLING, REGEX_REPLACE: REGEX_REPLACE, ABBREV: ABBREV, PROVINCES: PROVINCES, DISTRICTS: DISTRICTS, SUBDISTRICTS: SUBDISTRICTS };
+  return { applyRoad: applyRoad, SPELLING: SPELLING, REGEX_REPLACE: REGEX_REPLACE, ABBREV: ABBREV, MISSING_THAI_MARKS: MISSING_THAI_MARKS, PROVINCES: PROVINCES, DISTRICTS: DISTRICTS, SUBDISTRICTS: SUBDISTRICTS };
 });

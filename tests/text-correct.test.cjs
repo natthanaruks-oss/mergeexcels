@@ -59,3 +59,18 @@ assert.equal(RC.applyRoad("ตอนนี้พร้อมใช้งาน")
 console.log("✅ 9 road: spacing after standalone ตอน");
 
 console.log("ALL TEXT-CORRECT TESTS PASSED");
+
+// 10) missing sara-am patterns from real road-budget PDF output
+assert.equal(
+  TC.correctThai("งานบารุงตามกาหนดเวลาและอุปกรณ์อานวยความสะดวกกาลังเครื่องยนต์", { roadPack: true }),
+  "งานบำรุงตามกำหนดเวลาและอุปกรณ์อำนวยความสะดวกกำลังเครื่องยนต์"
+);
+assert.equal(
+  TC.correctThai("จ.กาแพงเพชร", { roadPack: true }),
+  "จ.กำแพงเพชร"
+);
+assert.equal(
+  TC.correctThai("ระบายน ้าและต ่ากว่า", { roadPack: true }),
+  "ระบายน้ำและต่ำกว่า"
+);
+console.log("✅ 10 road missing Thai marks repaired");
