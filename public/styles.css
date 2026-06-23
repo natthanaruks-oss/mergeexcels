@@ -26,6 +26,26 @@ body {
 button, input { font: inherit; }
 button { cursor: pointer; }
 
+
+.brand-title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.version-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 22px;
+  padding: 2px 8px;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  opacity: 0.72;
+}
+
 .site-header {
   display: flex;
   align-items: center;

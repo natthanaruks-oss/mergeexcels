@@ -1,6 +1,6 @@
 {
   "name": "mergeexcels",
-  "version": "3.0.0",
+  "version": "3.2.0",
   "private": true,
   "description": "Browser-based Excel and PDF merge, combine, and split toolkit for Cloudflare Workers Static Assets",
   "engines": {
@@ -10,7 +10,8 @@
     "vendor": "node scripts/copy-vendor.mjs",
     "dev": "npm run vendor && wrangler dev",
     "deploy": "npm run vendor && wrangler deploy",
-    "test": "node tests/excel-ops.test.cjs && node tests/pdf-ops.test.cjs && node tests/text-correct.test.cjs && node tests/pdftable-ops.test.cjs"
+    "test": "node tests/excel-ops.test.cjs && node tests/pdf-ops.test.cjs && node tests/text-correct.test.cjs && node tests/pdftable-ops.test.cjs",
+    "verify": "npm test && node scripts/check-release.mjs"
   },
   "dependencies": {
     "jszip": "3.10.1",
