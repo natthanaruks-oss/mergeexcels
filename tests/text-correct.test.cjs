@@ -30,4 +30,12 @@ console.log("✅ 6 gov pattern");
 assert.ok(TC.correctThai("Apr 30, 2-25").includes("2-25"), "risky rule off by default");
 console.log("✅ 7 risky rule off");
 
+// 8) road pack: glued จ.<province> gets a space (validated by gazetteer)
+const RC = require("../public/thai-roads-config.js");
+assert.equal(RC.applyRoad("ตอนเชียงม่วนจ.พะเยา"), "ตอนเชียงม่วน จ.พะเยา");
+assert.equal(RC.applyRoad("บางเสด็จจ.พระนครศรีอยุธยา"), "บางเสด็จ จ.พระนครศรีอยุธยา");
+assert.equal(RC.applyRoad("ตอนบ้านถำอ.เชียงคำ"), "ตอนบ้านถำ อ.เชียงคำ");
+assert.equal(RC.applyRoad("ผิวทางต.บางพระ"), "ผิวทาง ต.บางพระ");
+console.log("✅ 8 road: จ.province spacing");
+
 console.log("ALL TEXT-CORRECT TESTS PASSED");
