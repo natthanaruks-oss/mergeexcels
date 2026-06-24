@@ -18,7 +18,7 @@ const matrix = [
   ["รวม", 75000000],
 ];
 const rows = Ops.extractProjectsFromMatrix(matrix, {
-  agency: "DOH", constructionPercent: 0.6, maintenancePercent: 0.4,
+  agency: "DOH", constructionPercent: 0.6, maintenancePercent: 0.8,
   defaultConstruction: "Constructions HMA (2 layers)-A", defaultMaintenance: "HMA Overlay-A",
   projectRowsOnly: true, roadBudgetOnly: true,
 });
@@ -31,7 +31,7 @@ assert.equal(rows[1].category, "Maintenance");
 assert.equal(rows[1].workType, "HMA Overlay-A");
 
 const built = Ops.buildWorkbook(XLSX, [["ถนนสาย ชม.5080 แยก ทช.ชม.3005 - ศูนย์พัฒนาโครงการหลวงตีนตก อ.แม่ออน จ.เชียงใหม่", 34000000]], {
-  agency: "DOR", constructionPercent: 0.7, maintenancePercent: 0.4,
+  agency: "DOR", constructionPercent: 0.7, maintenancePercent: 0.8,
   defaultConstruction: "Constructions HMA (1 Layer)-A", defaultMaintenance: "HMA Overlay-A",
   projectRowsOnly: true, roadBudgetOnly: false,
 });
@@ -48,10 +48,20 @@ const filtered = Ops.extractProjectsFromMatrix([
   ["(1) ค่าชดเชยอสังหาริมทรัพย์ในการเวนคืนที่ดินทางหลวงพิเศษ 1 รายการ", "924,801,300 บาท"],
   ["(2) ก่อสร้าง ทล. 2 ตอน สีคิ้ว - ปากช่อง จ.นครราชสีมา 1 แห่ง", "120,000,000 บาท"],
 ], {
-  agency: "DOH", constructionPercent: 0.6, maintenancePercent: 0.4,
+  agency: "DOH", constructionPercent: 0.6, maintenancePercent: 0.8,
   defaultConstruction: "Constructions HMA (2 layers)-A", defaultMaintenance: "HMA Overlay-A",
   projectRowsOnly: true, roadBudgetOnly: true,
 });
 assert.equal(filtered.length, 1);
 assert.match(filtered[0].description, /ทล\. 2/);
 console.log("BudgetBuilder filtering regression passed.");
+
+const defaultMaintenance = Ops.extractProjectsFromMatrix([
+  ["กิจกรรมบำรุงรักษาทางหลวง"],
+  ["(1) งานบำรุง ทล. 1 ตอน ตัวอย่าง จ.นครสวรรค์ 1 แห่ง", "10,000,000 บาท"],
+], { agency: "DOH", projectRowsOnly: true, roadBudgetOnly: true });
+assert.equal(defaultMaintenance.length, 1);
+assert.equal(defaultMaintenance[0].percent, 0.8);
+assert.equal(defaultMaintenance[0].annualBudget, 8000000);
+console.log("BudgetBuilder maintenance 80% default regression passed.");
+

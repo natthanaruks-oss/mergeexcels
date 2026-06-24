@@ -345,7 +345,7 @@
     if (policy.blocked) return Promise.reject(new Error(policy.message));
     terminateOptimizeWorker();
     const jobId = state.optimizeJobId;
-    const worker = new Worker(`./optimize-worker.js?v=3.4.0`);
+    const worker = new Worker(`./optimize-worker.js?v=3.4.1`);
     state.optimizeWorker = worker;
 
     return new Promise(async (resolve, reject) => {
@@ -490,7 +490,7 @@
     return {
       agency: els.budgetAgency.value === "DOR" ? "DOR" : "DOH",
       constructionPercent: toPercent(els.constructionPercent, 0.6),
-      maintenancePercent: toPercent(els.maintenancePercent, 0.4),
+      maintenancePercent: toPercent(els.maintenancePercent, 0.8),
       otherPercent: 0,
       defaultConstruction: els.defaultConstructionType.value,
       defaultMaintenance: els.defaultMaintenanceType.value,

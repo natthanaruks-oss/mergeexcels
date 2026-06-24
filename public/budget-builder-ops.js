@@ -142,7 +142,7 @@
     const minimumAmount = Number(options.minimumAmount || 100000);
     const percentages = {
       Construction: Number(options.constructionPercent ?? 0.6),
-      Maintenance: Number(options.maintenancePercent ?? 0.4),
+      Maintenance: Number(options.maintenancePercent ?? 0.8),
       Other: Number(options.otherPercent ?? 0),
     };
     const defaults = {

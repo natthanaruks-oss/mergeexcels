@@ -1,4 +1,4 @@
-# MergeExcels v3.4.0 — Excel, PDF & Budget Intelligence Toolkit
+# MergeExcels v3.4.1 — Excel, PDF & Budget Intelligence Toolkit
 
 Web Application สำหรับจัดการไฟล์ Excel และ PDF แบบ **Client-side 100%**
 ไฟล์ของผู้ใช้ถูกประมวลผลในเบราว์เซอร์และไม่ถูกอัปโหลดขึ้น Application Server
@@ -118,7 +118,7 @@ Cloudflare Build Settings:
 3. ลาก **ทุกไฟล์และโฟลเดอร์ที่อยู่ข้างใน** ขึ้น Repo เดิม
 4. ต้องเห็น `public/`, `package.json`, `package-lock.json`, `wrangler.jsonc` และ `.node-version` ที่หน้า Root
 5. Commit แล้วรอ Cloudflare Deploy อัตโนมัติ
-6. เปิดเว็บและตรวจ Version Badge ต้องเป็น `v3.4.0`
+6. เปิดเว็บและตรวจ Version Badge ต้องเป็น `v3.4.1`
 
 ## Security Notes
 
