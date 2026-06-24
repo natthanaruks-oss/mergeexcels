@@ -111,6 +111,19 @@
       dropHint: "รองรับ .xlsx, .xls, .xlsm และ .xlsb · 80–250 MB อาจใช้เวลาหลายนาที · มากกว่า 512 MB ต้องแบ่งไฟล์/Export CSV",
       unitLabel: "Sheet",
     },
+    budgetBuilder: {
+      kind: "excel",
+      eyebrow: "DOH / DOR BUDGET BUILDER",
+      title: "สร้างไฟล์วิเคราะห์งบ DOH/DOR",
+      description: "รับ Clean Raw Data จากเมนู 06 แล้ว Mapping จังหวัด Region ประเภทงาน Factor พื้นที่ และประมาณการปริมาณผลิตภัณฑ์",
+      button: "สร้าง DOH/DOR Complete File",
+      output: "DOH_DOR_Budget_Builder.xlsx",
+      extension: "xlsx",
+      multiple: false,
+      dropTitle: "เลือก Clean Raw Excel จากเมนู 06 หรือไฟล์รายละเอียดงบประมาณ",
+      dropHint: "รองรับ .xlsx, .xls, .xlsm และ .xlsb · Factor DOH/DOR ฝังอยู่ในระบบแล้ว",
+      unitLabel: "Sheet",
+    },
   };
 
   const state = {
@@ -155,6 +168,15 @@
     useHeader: document.getElementById("useHeader"),
     addSourceColumns: document.getElementById("addSourceColumns"),
     optimizeOptions: document.getElementById("optimizeOptions"),
+    budgetBuilderOptions: document.getElementById("budgetBuilderOptions"),
+    budgetAgency: document.getElementById("budgetAgency"),
+    budgetSourceSheet: document.getElementById("budgetSourceSheet"),
+    constructionPercent: document.getElementById("constructionPercent"),
+    maintenancePercent: document.getElementById("maintenancePercent"),
+    defaultConstructionType: document.getElementById("defaultConstructionType"),
+    defaultMaintenanceType: document.getElementById("defaultMaintenanceType"),
+    projectRowsOnly: document.getElementById("projectRowsOnly"),
+    roadBudgetOnly: document.getElementById("roadBudgetOnly"),
     optimizeMode: document.getElementById("optimizeMode"),
     optimizeFormat: document.getElementById("optimizeFormat"),
     removeComments: document.getElementById("removeComments"),
@@ -323,7 +345,7 @@
     if (policy.blocked) return Promise.reject(new Error(policy.message));
     terminateOptimizeWorker();
     const jobId = state.optimizeJobId;
-    const worker = new Worker(`./optimize-worker.js?v=3.3.5`);
+    const worker = new Worker(`./optimize-worker.js?v=3.4.0`);
     state.optimizeWorker = worker;
 
     return new Promise(async (resolve, reject) => {
@@ -433,6 +455,52 @@
     setTimeout(() => URL.revokeObjectURL(url), 1500);
   }
 
+  function populateBudgetWorkTypes() {
+    if (!window.BudgetMaster || !els.budgetAgency) return;
+    const agency = els.budgetAgency.value === "DOR" ? "DOR" : "DOH";
+    const workTypes = (window.BudgetMaster.factors[agency] || []).map((item) => item.workType);
+    const constructionPreferred = agency === "DOH" ? "Constructions HMA (2 layers)-A" : "Constructions HMA (1 Layer)-A";
+    const maintenancePreferred = "HMA Overlay-A";
+    const fill = (select, preferred) => {
+      const previous = select.value;
+      select.innerHTML = workTypes.map((name) => `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`).join("");
+      select.value = workTypes.includes(previous) ? previous : (workTypes.includes(preferred) ? preferred : (workTypes[0] || ""));
+    };
+    fill(els.defaultConstructionType, constructionPreferred);
+    fill(els.defaultMaintenanceType, maintenancePreferred);
+    if (state.mode === "budgetBuilder") {
+      const base = state.files[0] ? ExcelOps.basename(state.files[0].name) : "Budget";
+      els.outputName.value = `${agency}_${base}_Complete.xlsx`;
+    }
+  }
+
+  function populateBudgetSourceSheets() {
+    if (!els.budgetSourceSheet) return;
+    const workbook = state.parsed[0] && state.parsed[0].workbook;
+    const names = workbook && Array.isArray(workbook.SheetNames) ? workbook.SheetNames : [];
+    els.budgetSourceSheet.innerHTML = names.length ? names.map((name) => `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`).join("") : '<option value="">เลือกไฟล์ก่อน</option>';
+    if (names.includes("PDF Data")) els.budgetSourceSheet.value = "PDF Data";
+  }
+
+  function getBudgetBuilderOptions() {
+    const toPercent = (element, fallback) => {
+      const value = Number(element && element.value);
+      return Number.isFinite(value) ? Math.max(0, Math.min(100, value)) / 100 : fallback;
+    };
+    return {
+      agency: els.budgetAgency.value === "DOR" ? "DOR" : "DOH",
+      constructionPercent: toPercent(els.constructionPercent, 0.6),
+      maintenancePercent: toPercent(els.maintenancePercent, 0.4),
+      otherPercent: 0,
+      defaultConstruction: els.defaultConstructionType.value,
+      defaultMaintenance: els.defaultMaintenanceType.value,
+      projectRowsOnly: els.projectRowsOnly.checked,
+      roadBudgetOnly: els.roadBudgetOnly.checked,
+      roadPack: true,
+      minimumAmount: 100000,
+    };
+  }
+
   function updateMode(mode) {
     if (state.busy || !MODES[mode]) return;
     state.mode = mode;
@@ -456,6 +524,8 @@
     els.unitLabel.textContent = config.unitLabel;
     els.combineOptions.classList.toggle("hidden", mode !== "combineExcel");
     els.optimizeOptions.classList.toggle("hidden", mode !== "optimizeExcel");
+    els.budgetBuilderOptions.classList.toggle("hidden", mode !== "budgetBuilder");
+    if (mode === "budgetBuilder") populateBudgetWorkTypes();
     const usesPageRange = mode === "pdf2excel" || mode === "ocr2excel";
     document.body.classList.toggle("pdf-mode", config.kind === "pdf" && !usesPageRange);
     els.pageRangePanel.classList.toggle("hidden", !usesPageRange);
@@ -514,6 +584,7 @@
     }
     if (!config.multiple && valid.length !== 1) {
       if (state.mode === "optimizeExcel") throw new Error("Optimize Excel รองรับครั้งละ 1 ไฟล์เท่านั้น");
+      if (state.mode === "budgetBuilder") throw new Error("Budget Builder รองรับครั้งละ 1 ไฟล์เท่านั้น");
       throw new Error(config.kind === "pdf" ? "Split PDF รองรับครั้งละ 1 ไฟล์เท่านั้น" : "Split File รองรับครั้งละ 1 ไฟล์เท่านั้น");
     }
     return valid;
@@ -598,6 +669,10 @@
         els.outputName.value = `${ExcelOps.basename(files[0].name)}_optimized.xlsx`;
         updateOptimizeOptionState();
         await analyzeOptimizeFile(files[0]);
+      } else if (state.mode === "budgetBuilder") {
+        populateBudgetSourceSheets();
+        populateBudgetWorkTypes();
+        setStatus("อ่านไฟล์เรียบร้อย เลือกหน่วยงาน Sheet และสมมติฐานก่อนสร้าง Complete File", "success", 0);
       } else {
         setStatus("อ่านไฟล์เรียบร้อย พร้อมประมวลผล", "success", 0);
       }
@@ -1057,6 +1132,23 @@
     return `OCR ${planned} หน้าเป็น ${workbook.SheetNames.length} Sheet ใน ${outputName} (โปรดตรวจทานความถูกต้อง)`;
   }
 
+  async function processBudgetBuilder() {
+    if (!window.BudgetBuilderOps || !window.BudgetMaster) throw new Error("โหลด Budget Builder module ไม่สำเร็จ กรุณารีเฟรชหน้าเว็บ");
+    const input = state.parsed[0];
+    if (!input || !input.workbook) throw new Error("กรุณาเลือกไฟล์ Excel ต้นทาง");
+    const sheetName = els.budgetSourceSheet.value || input.workbook.SheetNames[0];
+    const worksheet = input.workbook.Sheets[sheetName];
+    if (!worksheet) throw new Error("ไม่พบ Source Sheet ที่เลือก");
+    setStatus("กำลังอ่านรายการโครงการและ Mapping จังหวัด...", "working", 35);
+    const matrix = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: "", raw: true, blankrows: false });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    const result = BudgetBuilderOps.buildWorkbook(XLSX, matrix, getBudgetBuilderOptions());
+    setStatus(`พบ ${formatNumber(result.report.total)} รายการ · กำลังสร้าง Workbook...`, "working", 78);
+    const outputName = ensureExtension(els.outputName.value, "xlsx");
+    XLSX.writeFile(result.workbook, outputName, { bookType: "xlsx", compression: true, cellFormula: true, cellStyles: true });
+    return `สร้าง ${outputName} เรียบร้อย · ${formatNumber(result.report.total)} รายการ · Mapping จังหวัด ${formatNumber(result.report.mappedProvince)} · ต้องตรวจ ${formatNumber(result.report.needsReview)}`;
+  }
+
   async function processOptimizeExcel() {
     const file = state.files[0];
     if (!file || !state.optimizeAnalysis) throw new Error("กรุณาเลือกและรอวิเคราะห์ไฟล์ Excel ก่อน");
@@ -1102,6 +1194,7 @@
       else if (state.mode === "pdf2excel") message = await processPdf2Excel();
       else if (state.mode === "ocr2excel") message = await processOcr2Excel();
       else if (state.mode === "optimizeExcel") message = await processOptimizeExcel();
+      else if (state.mode === "budgetBuilder") message = await processBudgetBuilder();
       else if (state.mode === "mergePdf") message = await processMergePdf();
       else message = await processSplitPdf();
       setStatus(message, "success", 100);
@@ -1125,6 +1218,7 @@
   els.resetButton.addEventListener("click", resetFiles);
   els.processButton.addEventListener("click", processFiles);
   els.cancelButton.addEventListener("click", cancelOptimizeJob);
+  els.budgetAgency.addEventListener("change", populateBudgetWorkTypes);
   [
     els.optimizeMode,
     els.optimizeFormat,

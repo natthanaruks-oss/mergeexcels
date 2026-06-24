@@ -5,24 +5,26 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="รวม ต่อ และแยกไฟล์ Excel และ PDF บนเบราว์เซอร์โดยไม่อัปโหลดไฟล์ขึ้นเซิร์ฟเวอร์" />
     <title>MergeExcels — Excel & PDF File Toolkit</title>
-    <link rel="stylesheet" href="./styles.css?v=3.3.5" />
-    <script defer src="./vendor/xlsx.full.min.js?v=3.3.5"></script>
-    <script defer src="./vendor/jszip.min.js?v=3.3.5"></script>
-    <script defer src="./vendor/pdf-lib.min.js?v=3.3.5"></script>
-    <script defer src="./vendor/pdf.min.js?v=3.3.5"></script>
-    <script defer src="./excel-ops.js?v=3.3.5"></script>
-    <script defer src="./pdf-ops.js?v=3.3.5"></script>
-    <script defer src="./thai-roads-config.js?v=3.3.5"></script>
-    <script defer src="./text-correct.js?v=3.3.5"></script>
-    <script defer src="./pdftable-ops.js?v=3.3.5"></script>
-    <script defer src="./optimize-ops.js?v=3.3.5"></script>
-    <script defer src="./app.js?v=3.3.5"></script>
+    <link rel="stylesheet" href="./styles.css?v=3.4.0" />
+    <script defer src="./vendor/xlsx.full.min.js?v=3.4.0"></script>
+    <script defer src="./vendor/jszip.min.js?v=3.4.0"></script>
+    <script defer src="./vendor/pdf-lib.min.js?v=3.4.0"></script>
+    <script defer src="./vendor/pdf.min.js?v=3.4.0"></script>
+    <script defer src="./excel-ops.js?v=3.4.0"></script>
+    <script defer src="./pdf-ops.js?v=3.4.0"></script>
+    <script defer src="./thai-roads-config.js?v=3.4.0"></script>
+    <script defer src="./text-correct.js?v=3.4.0"></script>
+    <script defer src="./pdftable-ops.js?v=3.4.0"></script>
+    <script defer src="./optimize-ops.js?v=3.4.0"></script>
+    <script defer src="./budget-master.js?v=3.4.0"></script>
+    <script defer src="./budget-builder-ops.js?v=3.4.0"></script>
+    <script defer src="./app.js?v=3.4.0"></script>
   </head>
   <body>
     <header class="site-header">
       <div class="brand-mark" aria-hidden="true">M</div>
       <div>
-        <div class="brand-title-row"><h1>MergeExcels</h1><span class="version-badge">v3.3.5</span></div>
+        <div class="brand-title-row"><h1>MergeExcels</h1><span class="version-badge">v3.4.0</span></div>
         <p>เครื่องมือรวม ต่อ และแยกไฟล์ Excel และ PDF โดยประมวลผลในเบราว์เซอร์</p>
       </div>
     </header>
@@ -84,6 +86,13 @@
           <strong>Reduce Excel Size</strong>
           <span>ลดขนาดและแบ่งไฟล์ Oracle Export โดยไม่ทำให้หน้าจอค้าง</span>
           <small>Analyze · Values Only · Split Rows · CSV</small>
+        </button>
+        <button class="mode-card budget-card" type="button" data-mode="budgetBuilder" aria-pressed="false">
+          <span class="mode-number">09</span>
+          <span class="mode-type">BI · BUDGET</span>
+          <strong>DOH/DOR Budget Builder</strong>
+          <span>แปลง Clean Raw Data เป็นไฟล์วิเคราะห์งบและประมาณการปริมาณผลิตภัณฑ์</span>
+          <small>Province · Region · Work Type · Factor · Validation</small>
         </button>
       </section>
 
@@ -222,6 +231,30 @@
           <div id="optimizeWarning" class="optimize-warning hidden"></div>
         </section>
 
+
+        <section id="budgetBuilderOptions" class="options-panel budget-builder-panel hidden" aria-labelledby="budgetBuilderTitle">
+          <div class="panel-heading">
+            <div>
+              <h3 id="budgetBuilderTitle">ตั้งค่า DOH/DOR Budget Builder</h3>
+              <small>ใช้ไฟล์ Clean Raw Data จากเมนู 06 หรือ Excel ที่มีรายละเอียดโครงการและงบประมาณ</small>
+            </div>
+            <span class="local-badge">FACTOR EMBEDDED</span>
+          </div>
+          <div class="budget-builder-grid">
+            <label class="field-group"><span>หน่วยงาน</span><select id="budgetAgency"><option value="DOH" selected>DOH — กรมทางหลวง</option><option value="DOR">DOR — กรมทางหลวงชนบท</option></select></label>
+            <label class="field-group"><span>Source Sheet</span><select id="budgetSourceSheet"><option value="">เลือกไฟล์ก่อน</option></select></label>
+            <label class="field-group"><span>Construction Budget %</span><input id="constructionPercent" type="number" min="0" max="100" step="1" value="60" /></label>
+            <label class="field-group"><span>Maintenance Budget %</span><input id="maintenancePercent" type="number" min="0" max="100" step="1" value="40" /></label>
+            <label class="field-group wide"><span>Default Construction Work Type</span><select id="defaultConstructionType"></select></label>
+            <label class="field-group wide"><span>Default Maintenance Work Type</span><select id="defaultMaintenanceType"></select></label>
+          </div>
+          <div class="option-check-grid">
+            <label class="check-row compact"><input id="projectRowsOnly" type="checkbox" checked /><span><strong>Project Detail Only</strong><small>ตัด Summary/Header และใช้เฉพาะบรรทัดที่มีลักษณะเป็นโครงการ</small></span></label>
+            <label class="check-row compact"><input id="roadBudgetOnly" type="checkbox" checked /><span><strong>Road Construction/Maintenance Only</strong><small>ตัดรายการ Other ที่ไม่ใช่งานก่อสร้างหรือบำรุงทาง</small></span></label>
+          </div>
+          <div class="builder-info"><strong>ผลลัพธ์มี 6 Sheets</strong><span>DOH/DOR · Summary · Validation · Factor Master · Region Mapping · Raw Source</span></div>
+        </section>
+
         <section id="analysisPanel" class="analysis-panel hidden" aria-labelledby="analysisTitle">
           <div class="analysis-head">
             <div>
@@ -314,12 +347,17 @@
             <strong>Reduce Excel Size</strong>
             <p>สร้างไฟล์ใหม่จากข้อมูลจริง ตัดช่วงว่างและ Metadata ส่วนเกิน พร้อมแบ่ง Oracle Export ตามจำนวนแถว</p>
           </article>
+          <article>
+            <span class="note-type budget">BI · BUDGET</span>
+            <strong>DOH/DOR Budget Builder</strong>
+            <p>แยกโครงการและงบประมาณ Mapping จังหวัด/Region พร้อมคำนวณพื้นที่และปริมาณผลิตภัณฑ์จาก Factor Master</p>
+          </article>
         </div>
         <p class="privacy-note">ไฟล์ถูกประมวลผลบนเครื่องของคุณ ไม่ได้อัปโหลดไปยังเซิร์ฟเวอร์</p>
         <p class="limitation-note">Excel: Chart, รูปภาพ, Macro และฟีเจอร์ขั้นสูงบางอย่างอาจไม่ถูกเก็บไว้ · PDF: ไม่รองรับไฟล์ที่เข้ารหัสหรือมีรหัสผ่าน และลายเซ็นดิจิทัลอาจใช้ไม่ได้หลังแก้ไข</p>
       </section>
     </main>
 
-    <footer>MergeExcels v3.3.5 — Excel & PDF Toolkit</footer>
+    <footer>MergeExcels v3.4.0 — Excel & PDF Toolkit</footer>
   </body>
 </html>

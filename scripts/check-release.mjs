@@ -21,13 +21,16 @@ const requiredFiles = [
   "public/optimize-worker.js",
   "tests/optimize-ops.test.cjs",
   "tests/optimize-worker.test.cjs",
+  "public/budget-master.js",
+  "public/budget-builder-ops.js",
+  "tests/budget-builder-ops.test.cjs",
 ];
 
 for (const relativePath of requiredFiles) {
   await access(resolve(root, relativePath));
 }
 
-const [nodeVersion, packageJsonRaw, packageLock, wrangler, headers, app, optimizeWorker, indexHtml] = await Promise.all([
+const [nodeVersion, packageJsonRaw, packageLock, wrangler, headers, app, optimizeWorker, indexHtml, budgetBuilder, budgetMaster] = await Promise.all([
   readFile(resolve(root, ".node-version"), "utf8"),
   readFile(resolve(root, "package.json"), "utf8"),
   readFile(resolve(root, "package-lock.json"), "utf8"),
@@ -36,6 +39,8 @@ const [nodeVersion, packageJsonRaw, packageLock, wrangler, headers, app, optimiz
   readFile(resolve(root, "public/app.js"), "utf8"),
   readFile(resolve(root, "public/optimize-worker.js"), "utf8"),
   readFile(resolve(root, "public/index.html"), "utf8"),
+  readFile(resolve(root, "public/budget-builder-ops.js"), "utf8"),
+  readFile(resolve(root, "public/budget-master.js"), "utf8"),
 ]);
 
 
@@ -69,6 +74,13 @@ if (!app.includes(`optimize-worker.js?v=${releaseVersion}`)) {
 }
 if (!optimizeWorker.includes(`optimize-ops.js?v=${releaseVersion}`)) {
   throw new Error(`Optimize Worker import version ไม่ตรงกับ package.json (${releaseVersion})`);
+}
+
+if (!indexHtml.includes('data-mode="budgetBuilder"') || !app.includes('processBudgetBuilder')) {
+  throw new Error("เมนู 09 Budget Builder เชื่อมต่อไม่ครบ");
+}
+if (!budgetBuilder.includes("buildWorkbook") || !budgetMaster.includes("Factor.xlsx")) {
+  throw new Error("Budget Builder master/engine ไม่ครบ");
 }
 
 if (packageJson.dependencies?.xlsx === "0.18.5") {

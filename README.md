@@ -1,4 +1,4 @@
-# MergeExcels v3.3 — Excel & PDF Toolkit
+# MergeExcels v3.4.0 — Excel, PDF & Budget Intelligence Toolkit
 
 Web Application สำหรับจัดการไฟล์ Excel และ PDF แบบ **Client-side 100%**
 ไฟล์ของผู้ใช้ถูกประมวลผลในเบราว์เซอร์และไม่ถูกอัปโหลดขึ้น Application Server
@@ -14,6 +14,7 @@ Web Application สำหรับจัดการไฟล์ Excel และ
 6. PDF to Excel — รวมทุกหน้าลง Sheet เดียว พร้อม Thai text correction
 7. OCR PDF to Excel — อ่าน PDF สแกน ไทย/อังกฤษ และรวมลง Sheet เดียว
 8. Optimize Excel — ลดขนาด Oracle Export, Values Only, Safe Optimize, Split by Row และ CSV
+9. DOH/DOR Budget Builder — แปลง Clean Raw Data เป็นไฟล์วิเคราะห์งบประมาณพร้อม Region, Factor และ Product Volume
 
 เมนู 06–07 มี **Road Document Mode** สำหรับแก้คำสะกด ย่อคำ และแยก `จ.` / `อ.` / `ต.` โดยตรวจสอบกับ Thai Gazetteer
 
@@ -36,6 +37,21 @@ Web Application สำหรับจัดการไฟล์ Excel และ
 
 ขนาดไฟล์ที่แนะนำ: ไม่เกิน 250 MB สำหรับ Browser ทั่วไป ไฟล์ 80 MB ขึ้นไปจะใช้ Large-file Sparse mode และอาจใช้เวลาหลายนาที ส่วนไฟล์มากกว่า 512 MB จะถูกหยุดก่อนโหลดเข้า RAM เพื่อป้องกัน Browser ค้าง; ควรแบ่ง Export จาก Oracle หรือใช้ CSV/Local Desktop Engine
 
+## เมนู 09 — DOH/DOR Budget Builder
+
+รับไฟล์ Excel ที่ได้จากเมนู 06 หรือ Clean Raw Data รูปแบบใกล้เคียง แล้วสร้าง Workbook สำหรับวิเคราะห์งบประมาณ DOH/DOR โดยใช้ Master จาก `Factor.xlsx` ที่ฝังไว้ในระบบ
+
+- เลือกหน่วยงาน `DOH` หรือ `DOR` ต่อการประมวลผลหนึ่งครั้ง
+- ตรวจจับจังหวัดและ Mapping เป็น Region / Sales Code จาก 77 จังหวัด
+- แยกหมวด Construction / Maintenance และเสนอ Work Type เบื้องต้น
+- กำหนด % งบประมาณปีใช้สำหรับ Construction และ Maintenance
+- คำนวณพื้นที่และปริมาณ AC60-70, AC40-50, PMA, EAP/CSS-1, MC-70, CRS-2, CSS-1h และ EMA
+- กรอง Narrative, Budget Summary, Land Compensation, Expropriation, Design และ Supervision ที่ไม่สร้าง Material Demand โดยตรง
+- สร้าง 6 Sheets: `DOH/DOR`, `Summary`, `Validation`, `Factor Master`, `Region Mapping`, `Raw Source`
+- สูตรในไฟล์ผลลัพธ์เชื่อมกับ Factor Master และ Region Mapping ภายในไฟล์ จึงไม่พึ่ง External Workbook
+
+> Auto Classification เป็นข้อเสนอเบื้องต้น ผู้ใช้ต้องตรวจ `Validation` และทบทวน Work Type / % ก่อนใช้เป็น Demand Forecast หรือ Management Report
+
 ## โครงสร้างสำคัญ
 
 ```text
@@ -50,6 +66,8 @@ mergeexcels/
 │   ├── thai-roads-config.js
 │   ├── optimize-ops.js      # Core logic สำหรับวิเคราะห์/ลดขนาด/แบ่งไฟล์
 │   ├── optimize-worker.js   # Web Worker ป้องกันหน้าเว็บค้าง
+│   ├── budget-master.js     # Region และ Factor Master ที่ฝังในระบบ
+│   ├── budget-builder-ops.js# Logic เมนู 09 และ Validation
 │   ├── styles.css
 │   ├── _headers             # CSP และ Security Headers
 │   └── vendor/              # Libraries ที่โหลดจากโดเมนเดียวกัน
@@ -100,7 +118,7 @@ Cloudflare Build Settings:
 3. ลาก **ทุกไฟล์และโฟลเดอร์ที่อยู่ข้างใน** ขึ้น Repo เดิม
 4. ต้องเห็น `public/`, `package.json`, `package-lock.json`, `wrangler.jsonc` และ `.node-version` ที่หน้า Root
 5. Commit แล้วรอ Cloudflare Deploy อัตโนมัติ
-6. เปิดเว็บและตรวจ Version Badge ต้องเป็น `v3.3.5`
+6. เปิดเว็บและตรวจ Version Badge ต้องเป็น `v3.4.0`
 
 ## Security Notes
 
