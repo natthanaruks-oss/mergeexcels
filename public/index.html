@@ -5,27 +5,27 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="รวม ต่อ และแยกไฟล์ Excel และ PDF บนเบราว์เซอร์โดยไม่อัปโหลดไฟล์ขึ้นเซิร์ฟเวอร์" />
     <title>MergeExcels — Excel & PDF File Toolkit</title>
-    <link rel="stylesheet" href="./styles.css?v=3.5.0" />
-    <script defer src="./vendor/xlsx.full.min.js?v=3.5.0"></script>
-    <script defer src="./vendor/jszip.min.js?v=3.5.0"></script>
-    <script defer src="./vendor/pdf-lib.min.js?v=3.5.0"></script>
-    <script defer src="./vendor/pdf.min.js?v=3.5.0"></script>
-    <script defer src="./excel-ops.js?v=3.5.0"></script>
-    <script defer src="./pdf-ops.js?v=3.5.0"></script>
-    <script defer src="./thai-roads-config.js?v=3.5.0"></script>
-    <script defer src="./text-correct.js?v=3.5.0"></script>
-    <script defer src="./pdftable-ops.js?v=3.5.0"></script>
-    <script defer src="./optimize-ops.js?v=3.5.0"></script>
-    <script defer src="./budget-master.js?v=3.5.0"></script>
-    <script defer src="./budget-history-rules.js?v=3.5.0"></script>
-    <script defer src="./budget-builder-ops.js?v=3.5.0"></script>
-    <script defer src="./app.js?v=3.5.0"></script>
+    <link rel="stylesheet" href="./styles.css?v=3.5.2" />
+    <script defer src="./vendor/xlsx.full.min.js?v=3.5.2"></script>
+    <script defer src="./vendor/jszip.min.js?v=3.5.2"></script>
+    <script defer src="./vendor/pdf-lib.min.js?v=3.5.2"></script>
+    <script defer src="./vendor/pdf.min.js?v=3.5.2"></script>
+    <script defer src="./excel-ops.js?v=3.5.2"></script>
+    <script defer src="./pdf-ops.js?v=3.5.2"></script>
+    <script defer src="./thai-roads-config.js?v=3.5.2"></script>
+    <script defer src="./text-correct.js?v=3.5.2"></script>
+    <script defer src="./pdftable-ops.js?v=3.5.2"></script>
+    <script defer src="./optimize-ops.js?v=3.5.2"></script>
+    <script defer src="./budget-master.js?v=3.5.2"></script>
+    <script defer src="./budget-history-rules.js?v=3.5.2"></script>
+    <script defer src="./budget-builder-ops.js?v=3.5.2"></script>
+    <script defer src="./app.js?v=3.5.2"></script>
   </head>
   <body>
     <header class="site-header">
       <div class="brand-mark" aria-hidden="true">M</div>
       <div>
-        <div class="brand-title-row"><h1>MergeExcels</h1><span class="version-badge">v3.5.0</span></div>
+        <div class="brand-title-row"><h1>MergeExcels</h1><span class="version-badge">v3.5.2</span></div>
         <p>เครื่องมือรวม ต่อ และแยกไฟล์ Excel และ PDF โดยประมวลผลในเบราว์เซอร์</p>
       </div>
     </header>
@@ -246,34 +246,58 @@
             <label class="field-group"><span>Source Sheet</span><select id="budgetSourceSheet"><option value="">เลือกไฟล์ก่อน</option></select></label>
             <label class="field-group"><span>Construction Budget %</span><input id="constructionPercent" type="number" min="0" max="100" step="1" value="60" /></label>
             <label class="field-group"><span>Maintenance Budget %</span><input id="maintenancePercent" type="number" min="0" max="100" step="1" value="80" /></label>
-            <label class="field-group wide"><span>Fallback Construction Suggestion</span><select id="defaultConstructionType"></select><small>ใช้เป็นคำแนะนำเมื่อไม่พบ Historical Rule เท่านั้น</small></label>
-            <label class="field-group wide"><span>Fallback Maintenance Suggestion</span><select id="defaultMaintenanceType"></select><small>ยังต้องยืนยันก่อน Export</small></label>
+            <label class="field-group wide"><span>Fallback Construction Suggestion</span><select id="defaultConstructionType"></select><small>ใช้เป็นคำแนะนำสำรองเมื่อไม่พบ Historical Rule</small></label>
+            <label class="field-group wide"><span>Fallback Maintenance Suggestion</span><select id="defaultMaintenanceType"></select><small>ใช้เป็นคำแนะนำสำรองและส่งรายการ Low Confidence ไป Validation</small></label>
           </div>
           <div class="option-check-grid">
             <label class="check-row compact"><input id="projectRowsOnly" type="checkbox" checked /><span><strong>Project Detail Only</strong><small>ตัด Summary/Header และใช้เฉพาะบรรทัดที่มีลักษณะเป็นโครงการ</small></span></label>
             <label class="check-row compact"><input id="roadBudgetOnly" type="checkbox" checked /><span><strong>Road Construction/Maintenance Only</strong><small>ตัดรายการ Other ที่ไม่ใช่งานก่อสร้างหรือบำรุงทาง</small></span></label>
           </div>
           <div class="budget-review-actions">
-            <button id="budgetPrepareButton" class="secondary-button" type="button">วิเคราะห์รายการและเลือกประเภทงาน</button>
-            <label class="field-group"><span>ค้นหารายการ</span><input id="budgetSearch" type="search" placeholder="ชื่อสายทาง / จังหวัด" /></label>
-            <label class="field-group"><span>หมวดงบ</span><select id="budgetCategoryFilter"><option value="ALL">ทั้งหมด</option><option value="Construction">Construction</option><option value="Maintenance">Maintenance</option></select></label>
-            <label class="field-group"><span>Suggested Family</span><select id="budgetFamilyFilter"><option value="ALL">ทั้งหมด</option></select></label>
-            <label class="field-group"><span>Historical Confidence</span><select id="budgetConfidenceFilter"><option value="ALL">ทั้งหมด</option><option value="High">High ≥ 90%</option><option value="Medium">Medium 70–89%</option><option value="Low">Low / No rule</option></select></label>
-            <button id="budgetConfirmSuggested" class="secondary-button historical-button" type="button">ยืนยันคำแนะนำ High Confidence</button>
-            <label class="field-group wide"><span>กำหนดประเภทงานแบบกลุ่ม</span><select id="budgetBulkType"><option value="">เลือกประเภทงาน</option></select></label>
-            <button id="budgetApplyBulk" class="secondary-button" type="button">ใช้กับรายการที่กรอง</button>
+            <section class="budget-action-block budget-action-prepare" aria-labelledby="budgetPrepareHeading">
+              <div class="budget-action-heading">
+                <strong id="budgetPrepareHeading">1. วิเคราะห์รายการ</strong>
+                <small>อ่านข้อมูลโครงการและสร้างคำแนะนำจาก Historical Rule</small>
+              </div>
+              <button id="budgetPrepareButton" class="secondary-button" type="button">วิเคราะห์รายการและสร้างคำแนะนำ</button>
+            </section>
+
+            <section class="budget-action-block" aria-labelledby="budgetFilterHeading">
+              <div class="budget-action-heading">
+                <strong id="budgetFilterHeading">2. ค้นหาและกรองรายการ</strong>
+                <small>กรองเฉพาะรายการที่ต้องการตรวจหรือแก้ไข</small>
+              </div>
+              <div class="budget-filter-grid">
+                <label class="field-group"><span>ค้นหารายการ</span><input id="budgetSearch" type="search" placeholder="ชื่อสายทาง / จังหวัด" /></label>
+                <label class="field-group"><span>หมวดงบ</span><select id="budgetCategoryFilter"><option value="ALL">ทั้งหมด</option><option value="Construction">Construction</option><option value="Maintenance">Maintenance</option></select></label>
+                <label class="field-group"><span>Suggested Family</span><select id="budgetFamilyFilter"><option value="ALL">ทั้งหมด</option></select></label>
+                <label class="field-group"><span>Historical Confidence</span><select id="budgetConfidenceFilter"><option value="ALL">ทั้งหมด</option><option value="High">High ≥ 90%</option><option value="Medium">Medium 70–89%</option><option value="Low">Low / No rule</option></select></label>
+              </div>
+            </section>
+
+            <section class="budget-action-block" aria-labelledby="budgetAssignHeading">
+              <div class="budget-action-heading">
+                <strong id="budgetAssignHeading">3. แก้ไขเฉพาะข้อยกเว้น (ไม่บังคับ)</strong>
+                <small>ระบบแนะนำ Work Type รายโครงการให้อัตโนมัติ คุณแก้เฉพาะรายการที่ไม่เห็นด้วย</small>
+              </div>
+              <div class="budget-assignment-grid">
+                <button id="budgetConfirmSuggested" class="secondary-button historical-button" type="button">คืนค่าเป็นคำแนะนำระบบ</button>
+                <label class="field-group"><span>Override แบบกลุ่ม (ทางเลือก)</span><select id="budgetBulkType"><option value="">เลือกประเภทงาน</option></select></label>
+                <button id="budgetApplyBulk" class="secondary-button" type="button">Override รายการที่กรอง</button>
+              </div>
+            </section>
           </div>
           <div id="budgetPreviewPanel" class="budget-preview hidden">
-            <div class="budget-preview-head"><strong id="budgetPreviewSummary">ยังไม่ได้วิเคราะห์รายการ</strong><span>Historical Rule ใช้ข้อมูลปี 2020–2026 เพื่อแนะนำ Family เท่านั้น · ผู้ใช้ต้องยืนยัน Work Type ก่อน Export</span></div>
+            <div class="budget-preview-head"><strong id="budgetPreviewSummary">ยังไม่ได้วิเคราะห์รายการ</strong><span>ระบบแนะนำ Work Type รายโครงการจากข้อมูลปี 2020–2026 · High ใช้เป็นค่าเริ่มต้น · Medium/Low แยกไป Validation · แก้เฉพาะข้อยกเว้น</span></div>
             <div class="budget-table-wrap">
               <table class="budget-review-table">
-                <thead><tr><th>#</th><th>หมวด</th><th>Activity / Section</th><th>รายละเอียดโครงการ</th><th>จังหวัด</th><th>งบประมาณ</th><th>Historical Suggestion</th><th>Work Type ที่เลือก</th><th>สถานะ</th></tr></thead>
+                <thead><tr><th>#</th><th>หมวด</th><th>Activity / Section</th><th>รายละเอียดโครงการ</th><th>จังหวัด</th><th>งบประมาณ</th><th>Recommended Work Type</th><th>Override (ไม่บังคับ)</th><th>สถานะ</th></tr></thead>
                 <tbody id="budgetPreviewBody"></tbody>
               </table>
             </div>
             <div class="budget-pagination"><button id="budgetPrevPage" type="button">‹ ก่อนหน้า</button><span id="budgetPageInfo">หน้า 1 / 1</span><button id="budgetNextPage" type="button">ถัดไป ›</button></div>
           </div>
-          <div class="builder-info"><strong>Historical Smart Suggestion v1</strong><span>อ้างอิง 18,621 รายการ ปี 2020–2026 · แนะนำ Work Type Family พร้อม Confidence/Support · เก็บ Audit Log และ Manual Override</span></div>
+          <div class="builder-info"><strong>Historical Smart Suggestion v1</strong><span>อ้างอิง 18,621 รายการ ปี 2020–2026 · ระบบแนะนำ Work Type รายโครงการ · High ใช้ได้ทันที · Medium/Low อยู่ใน Validation · เก็บ Audit Log และ Manual Override</span></div>
         </section>
 
         <section id="analysisPanel" class="analysis-panel hidden" aria-labelledby="analysisTitle">
@@ -379,6 +403,6 @@
       </section>
     </main>
 
-    <footer>MergeExcels v3.5.0 — Excel & PDF Toolkit</footer>
+    <footer>MergeExcels v3.5.2 — Excel & PDF Toolkit</footer>
   </body>
 </html>

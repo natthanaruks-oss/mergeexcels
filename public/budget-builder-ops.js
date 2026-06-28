@@ -248,8 +248,8 @@
       const issues = [];
       if (!province) issues.push("ไม่พบจังหวัด");
       if (!workType || !factor) issues.push("ไม่พบคำแนะนำประเภทงาน");
-      else issues.push("ยังไม่ยืนยันประเภทงาน");
-      if (history.band === "Low") issues.push("Historical confidence ต่ำ");
+      else if (history.band === "Medium") issues.push("ตรวจสอบคำแนะนำ Medium confidence");
+      else if (history.band === "Low") issues.push("Manual Review: Low confidence");
       if (category === "Other") issues.push("ตรวจหมวดงบ");
       if (!amountInfo.amount) issues.push("ไม่พบงบประมาณ");
 
@@ -257,11 +257,11 @@
         agency, sequence: records.length + 1, description, province,
         region: regionInfo ? regionInfo.region : "", salesCode: regionInfo ? regionInfo.salesCode : "",
         category, activity: currentActivity, progress: "", percent, budget: amountInfo.amount, annualBudget,
-        workType, workTypeConfirmed: false, selectionSource: "Historical suggestion", cost: factor ? factor.cost : 0, area, products,
+        workType, workTypeConfirmed: false, selectionSource: "System recommendation", cost: factor ? factor.cost : 0, area, products,
         suggestedFamily: history.family, suggestedVariant: history.variant, suggestedWorkType: history.suggestedWorkType,
         historicalConfidence: history.confidence, historicalSupport: history.support, historicalBand: history.band,
         historicalRule: history.rule, historicalBasis: history.basis, historicalAction: history.action,
-        status: issues.join("; "),
+        status: issues.length ? issues.join("; ") : "Ready",
         confidence: history.band,
         sourceRow: rowIndex + 1,
       });
@@ -285,13 +285,14 @@
 
     const issues = [];
     if (!copy.province) issues.push("ไม่พบจังหวัด");
-    if (!copy.workType || !factor) issues.push("กรุณาเลือกประเภทงาน");
-    else if (!copy.workTypeConfirmed) issues.push("ยังไม่ยืนยันประเภทงาน");
+    if (!copy.workType || !factor) issues.push("ไม่พบคำแนะนำประเภทงาน");
+    else if (!copy.workTypeConfirmed && copy.historicalBand === "Medium") issues.push("ตรวจสอบคำแนะนำ Medium confidence");
+    else if (!copy.workTypeConfirmed && copy.historicalBand === "Low") issues.push("Manual Review: Low confidence");
     if (!copy.budget) issues.push("ไม่พบงบประมาณ");
     copy.selectedFamily = copy.workType ? BudgetHistoryRules.familyOfWorkType(copy.workType) : "";
-    copy.manualOverride = Boolean(copy.workTypeConfirmed && copy.suggestedFamily && copy.selectedFamily && copy.selectedFamily !== copy.suggestedFamily);
+    copy.manualOverride = Boolean(copy.workTypeConfirmed && copy.suggestedWorkType && copy.workType !== copy.suggestedWorkType);
     copy.status = issues.length ? issues.join("; ") : "Ready";
-    copy.confidence = issues.length === 0 ? "Confirmed" : (copy.province && copy.budget ? "Review" : "Low");
+    copy.confidence = copy.workTypeConfirmed ? "Confirmed" : (copy.historicalBand || (issues.length ? "Review" : "High"));
     return copy;
   }
 

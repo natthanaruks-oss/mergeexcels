@@ -1,4 +1,4 @@
-# MergeExcels v3.5.0 — Excel, PDF & Budget Intelligence Toolkit
+# MergeExcels v3.5.2 — Excel, PDF & Budget Intelligence Toolkit
 
 Web Application สำหรับจัดการไฟล์ Excel และ PDF แบบ **Client-side 100%**
 ไฟล์ของผู้ใช้ถูกประมวลผลในเบราว์เซอร์และไม่ถูกอัปโหลดขึ้น Application Server
@@ -43,20 +43,20 @@ Web Application สำหรับจัดการไฟล์ Excel และ
 
 - เลือกหน่วยงาน `DOH` หรือ `DOR` ต่อการประมวลผลหนึ่งครั้ง
 - ตรวจจับจังหวัดและ Mapping เป็น Region / Sales Code จาก 77 จังหวัด
-- แยกหมวด Construction / Maintenance และแสดงรายการให้ผู้ใช้เลือก Work Type รายโครงการ
+- แยกหมวด Construction / Maintenance และสร้าง Recommended Work Type รายโครงการอัตโนมัติ
 - กำหนด % งบประมาณปีใช้สำหรับ Construction และ Maintenance
 - คำนวณพื้นที่และปริมาณ AC60-70, AC40-50, PMA, EAP/CSS-1, MC-70, CRS-2, CSS-1h และ EMA
 - กรอง Narrative, Budget Summary, Land Compensation, Expropriation, Design และ Supervision ที่ไม่สร้าง Material Demand โดยตรง
 - Historical Smart Suggestion จากข้อมูลปี 2020–2026 จำนวน 18,621 รายการ โดยใช้ Agency + Activity / Section
 - แสดง Suggested Family, Historical Confidence, Support และ Top Variant เพื่อประกอบการตัดสินใจ
-- ผู้ใช้ต้องยืนยัน Work Type ทุกโครงการก่อน Export; ระบบไม่ Finalize Variant A/B/C/D/E แทนผู้ใช้
-- Filter ตาม Suggested Family / Confidence และยืนยัน High-Confidence Suggestion แบบกลุ่มได้โดยผู้ใช้เป็นผู้กด
+- High Confidence ใช้ Recommended Work Type เป็นค่าเริ่มต้นและ Export ได้ทันที; Medium / Low Confidence ถูกส่งไป Validation
+- Filter ตาม Suggested Family / Confidence และแก้เฉพาะข้อยกเว้นด้วย Optional Override หรือ Bulk Override
 - สร้าง 9 Sheets: `DOH/DOR`, `Summary`, `Validation`, `Factor Master`, `Historical Rules`, `WorkType Master`, `Audit Log`, `Region Mapping`, `Raw Source`
 - Audit Log เก็บ Suggested Family, Selected Work Type, Selection Source และ Manual Override
 - คำนวณ Factor ใน Browser แล้วเขียนผลลัพธ์เป็น Values Only ไม่มีสูตร VLOOKUP หรือ External Link
 - จัด Main Sheet แยก Construction / Maintenance และเรียงคอลัมน์ตาม Complete File ต้นกำเนิด
 
-> Historical Rule ช่วยแนะนำ Work Type Family เท่านั้น Exact Work Type และ Product Variant ต้องได้รับการยืนยันก่อน Export
+> ระบบเลือก Recommended Work Type จาก Historical Family, Variant และ Factor Master เพื่อใช้เป็นค่าตั้งต้น โดยแยก Medium / Low Confidence ไว้ใน Validation และเก็บ Manual Override ใน Audit Log
 
 ## โครงสร้างสำคัญ
 
@@ -125,7 +125,7 @@ Cloudflare Build Settings:
 3. ลาก **ทุกไฟล์และโฟลเดอร์ที่อยู่ข้างใน** ขึ้น Repo เดิม
 4. ต้องเห็น `public/`, `package.json`, `package-lock.json`, `wrangler.jsonc` และ `.node-version` ที่หน้า Root
 5. Commit แล้วรอ Cloudflare Deploy อัตโนมัติ
-6. เปิดเว็บและตรวจ Version Badge ต้องเป็น `v3.5.0`
+6. เปิดเว็บและตรวจ Version Badge ต้องเป็น `v3.5.2`
 
 ## Security Notes
 
@@ -133,3 +133,12 @@ Cloudflare Build Settings:
 - OCR โหลด Tesseract.js แบบ Lazy-load จาก jsDelivr เฉพาะเมื่อใช้เมนู 07
 - ไฟล์ผู้ใช้ยังประมวลผลใน Browser แต่เมนู OCR ต้องเชื่อมอินเทอร์เน็ตเพื่อโหลด OCR Engine/Language Data
 - รายละเอียด dependency risk และแผนอัปเกรดอยู่ใน `SECURITY.md`
+
+
+## v3.5.2 — Automatic Work Type Recommendation
+
+- Menu 09 แนะนำ Work Type รายโครงการให้อัตโนมัติจาก Historical Rules ปี 2020–2026
+- High Confidence ใช้เป็นค่าเริ่มต้นและ Export ได้โดยไม่ต้องกดยืนยันทีละรายการ
+- Medium / Low Confidence ส่งไป Validation เพื่อให้ตรวจเฉพาะข้อยกเว้น
+- Dropdown ในตารางใช้สำหรับ Override เท่านั้น ปล่อยว่างหมายถึงใช้คำแนะนำระบบ
+- Bulk Override เป็นตัวเลือกเสริม ไม่ใช่ขั้นตอนบังคับ

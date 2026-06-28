@@ -32,7 +32,8 @@ assert.equal(rows[1].suggestedFamily, "Recycling HMA");
 assert.equal(rows[1].workType, "Recycling HMA-A");
 assert.equal(rows[1].historicalBand, "Medium");
 assert.equal(rows[1].workTypeConfirmed, false);
-assert.match(rows[1].status, /ยังไม่ยืนยันประเภทงาน/);
+assert.match(rows[1].status, /Medium confidence/);
+assert.equal(rows[1].selectionSource, "System recommendation");
 
 const built = Ops.buildWorkbook(XLSX, [["ถนนสาย ชม.5080 แยก ทช.ชม.3005 - ศูนย์พัฒนาโครงการหลวงตีนตก อ.แม่ออน จ.เชียงใหม่", 34000000]], {
   agency: "DOR", constructionPercent: 0.7, maintenancePercent: 0.8,
@@ -72,6 +73,18 @@ assert.equal(defaultMaintenance[0].annualBudget, 8000000);
 assert.equal(defaultMaintenance[0].suggestedFamily, "Recycling HMA");
 assert.equal(defaultMaintenance[0].historicalSupport, 3067);
 console.log("BudgetBuilder maintenance 80% default regression passed.");
+
+const highAutomatic = Ops.extractProjectsFromMatrix([
+  ["งานบำรุงพิเศษและบูรณะ"],
+  ["(1) ทล. 1 ตอน ตัวอย่าง จ.นครสวรรค์ 1 แห่ง", "10,000,000 บาท"],
+], { agency: "DOH", projectRowsOnly: true, roadBudgetOnly: true });
+assert.equal(highAutomatic.length, 1);
+assert.equal(highAutomatic[0].historicalBand, "High");
+assert.equal(highAutomatic[0].workTypeConfirmed, false);
+assert.equal(highAutomatic[0].selectionSource, "System recommendation");
+assert.equal(highAutomatic[0].status, "Ready");
+assert.ok(highAutomatic[0].workType);
+console.log("BudgetBuilder automatic High-confidence recommendation regression passed.");
 
 
 

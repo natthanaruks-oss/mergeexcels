@@ -363,7 +363,7 @@
     if (policy.blocked) return Promise.reject(new Error(policy.message));
     terminateOptimizeWorker();
     const jobId = state.optimizeJobId;
-    const worker = new Worker(`./optimize-worker.js?v=3.5.0`);
+    const worker = new Worker(`./optimize-worker.js?v=3.5.2`);
     state.optimizeWorker = worker;
 
     return new Promise(async (resolve, reject) => {
@@ -552,7 +552,7 @@
       if (b === suggestedFamily) return 1;
       return a.localeCompare(b);
     });
-    const html = includeBlank ? ['<option value="">— กรุณาเลือกและยืนยันประเภทงาน —</option>'] : [];
+    const html = includeBlank ? ['<option value="">— ใช้คำแนะนำระบบ (ไม่ต้องเลือก) —</option>'] : [];
     order.forEach((family) => {
       const label = family === suggestedFamily ? `${family} · Suggested` : family;
       html.push(`<optgroup label="${escapeHtml(label)}">`);
@@ -594,30 +594,58 @@
     const start = (state.budgetPreviewPage - 1) * pageSize;
     const current = filtered.slice(start, start + pageSize);
 
-    els.budgetPreviewBody.innerHTML = current.map(({ record, index }) => {
+    // แสดงหัวข้อ Activity / Section เป็นแถวแบ่งกลุ่มเสมอ เพื่อให้ผู้ใช้เห็นบริบทของงานด้านล่าง
+    // แม้รายการเดิมจะต่อเนื่องข้ามหน้า ระบบจะสร้างหัวข้อซ้ำที่ต้นหน้าเพื่อไม่ให้บริบทหาย
+    const previewRows = [];
+    let previousActivityKey = null;
+    current.forEach(({ record, index }) => {
+      const activityLabel = String(record.activity || "").trim() || "ไม่พบหัวข้อกิจกรรม — กรุณาตรวจสอบ";
+      const activityKey = `${record.category || ""}::${activityLabel}`;
+      if (activityKey !== previousActivityKey) {
+        previewRows.push(`
+          <tr class="budget-activity-heading-row">
+            <td colspan="9">
+              <div class="budget-activity-heading">
+                <span class="budget-activity-kicker">Activity / Section</span>
+                <strong>${escapeHtml(activityLabel)}</strong>
+                <small>${escapeHtml(record.category || "ไม่ระบุหมวด")}</small>
+              </div>
+            </td>
+          </tr>`);
+        previousActivityKey = activityKey;
+      }
+
       const pct = Number(record.historicalConfidence || 0) * 100;
-      const suggestion = record.suggestedFamily
-        ? `<strong>${escapeHtml(record.suggestedFamily)}</strong><small>${pct.toFixed(1)}% · n=${formatNumber(record.historicalSupport || 0)} · Variant ${escapeHtml(record.suggestedVariant || "-")}</small>`
-        : `<strong>Manual Review</strong><small>ไม่พบ Historical Rule</small>`;
-      const confirmed = record.workTypeConfirmed ? '<span class="confirmed-badge">Confirmed</span>' : '<span class="pending-badge">ยังไม่ยืนยัน</span>';
-      return `
-      <tr class="${record.status === "Ready" ? "" : "needs-review"}">
-        <td>${formatNumber(record.sequence)}</td>
-        <td>${escapeHtml(record.category)}</td>
-        <td class="activity-cell">${escapeHtml(record.activity || "-")}</td>
-        <td>${escapeHtml(record.description)}</td>
-        <td>${escapeHtml(record.province || "-")}</td>
-        <td>${formatNumber(record.budget)}</td>
-        <td><div class="historical-suggestion ${String(record.historicalBand || "Low").toLowerCase()}">${suggestion}</div></td>
-        <td><select class="budget-worktype-select" data-index="${index}">${groupedWorkTypeOptions(record.workType, record.suggestedFamily)}</select>${confirmed}</td>
-        <td>${escapeHtml(record.status)}</td>
-      </tr>`;
-    }).join("");
+      const suggestion = record.suggestedWorkType
+        ? `<strong>${escapeHtml(record.suggestedWorkType)}</strong><small>${escapeHtml(record.suggestedFamily || "-")} · ${pct.toFixed(1)}% · n=${formatNumber(record.historicalSupport || 0)} · Variant ${escapeHtml(record.suggestedVariant || "-")}</small>`
+        : `<strong>Manual Review</strong><small>ไม่พบ Historical Rule ที่ใช้แนะนำ Work Type ได้</small>`;
+      const decisionBadge = record.workTypeConfirmed
+        ? `<span class="confirmed-badge">${record.manualOverride ? "Manual Override" : "ยืนยันเอง"}</span>`
+        : record.historicalBand === "High"
+          ? '<span class="auto-badge">Auto Recommend · High</span>'
+          : record.historicalBand === "Medium"
+            ? '<span class="pending-badge">Review · Medium</span>'
+            : '<span class="review-badge">Manual Review</span>';
+      previewRows.push(`
+        <tr class="${record.status === "Ready" ? "" : "needs-review"}">
+          <td>${formatNumber(record.sequence)}</td>
+          <td>${escapeHtml(record.category)}</td>
+          <td class="activity-cell">${escapeHtml(activityLabel)}</td>
+          <td>${escapeHtml(record.description)}</td>
+          <td>${escapeHtml(record.province || "-")}</td>
+          <td>${formatNumber(record.budget)}</td>
+          <td><div class="historical-suggestion ${String(record.historicalBand || "Low").toLowerCase()}">${suggestion}</div></td>
+          <td><select class="budget-worktype-select" data-index="${index}">${groupedWorkTypeOptions(record.workTypeConfirmed ? record.workType : "", record.suggestedFamily)}</select>${decisionBadge}</td>
+          <td>${escapeHtml(record.status)}</td>
+        </tr>`);
+    });
+    els.budgetPreviewBody.innerHTML = previewRows.join("");
 
     const ready = state.budgetRecords.filter((r) => r.status === "Ready").length;
-    const unconfirmed = state.budgetRecords.filter((r) => !r.workTypeConfirmed).length;
     const high = state.budgetRecords.filter((r) => r.historicalBand === "High").length;
-    els.budgetPreviewSummary.textContent = `${formatNumber(state.budgetRecords.length)} โครงการ · Historical High ${formatNumber(high)} · ยืนยันแล้ว ${formatNumber(ready)} · รอยืนยัน ${formatNumber(unconfirmed)}`;
+    const review = state.budgetRecords.filter((r) => r.status !== "Ready").length;
+    const overrides = state.budgetRecords.filter((r) => r.workTypeConfirmed).length;
+    els.budgetPreviewSummary.textContent = `${formatNumber(state.budgetRecords.length)} โครงการ · ระบบแนะนำ High ${formatNumber(high)} · Ready ${formatNumber(ready)} · Review ${formatNumber(review)} · แก้ไขเอง ${formatNumber(overrides)}`;
     els.budgetPageInfo.textContent = `หน้า ${state.budgetPreviewPage} / ${pages} · แสดง ${formatNumber(filtered.length)} รายการ`;
     els.budgetPrevPage.disabled = state.budgetPreviewPage <= 1;
     els.budgetNextPage.disabled = state.budgetPreviewPage >= pages;
@@ -646,13 +674,19 @@
     state.budgetPreviewPage = 1;
     populateBudgetFamilyFilter();
     renderBudgetPreview();
-    setStatus(`พบ ${formatNumber(records.length)} รายการ กรุณาตรวจและเลือกประเภทงานก่อน Export`, "success", 0);
+    setStatus(`พบ ${formatNumber(records.length)} รายการ · ระบบสร้าง Recommended Work Type แล้ว คุณแก้เฉพาะข้อยกเว้นได้`, "success", 0);
   }
 
   function updateBudgetRecordWorkType(index, workType) {
     const record = state.budgetRecords[index];
     if (!record) return;
-    state.budgetRecords[index] = BudgetBuilderOps.calculateRecord(record, { agency: els.budgetAgency.value, workType, confirmed: Boolean(workType), selectionSource: "Manual selection" });
+    const selected = String(workType || "").trim();
+    state.budgetRecords[index] = BudgetBuilderOps.calculateRecord(record, {
+      agency: els.budgetAgency.value,
+      workType: selected || record.suggestedWorkType || "",
+      confirmed: Boolean(selected),
+      selectionSource: selected ? "Manual selection" : "System recommendation",
+    });
     renderBudgetPreview();
   }
 
@@ -667,18 +701,18 @@
     setStatus(`กำหนดประเภทงานให้ ${formatNumber(filtered.length)} รายการแล้ว`, "success", 0);
   }
 
-  function confirmHighConfidenceSuggestions() {
-    const filtered = filteredBudgetRecords().filter(({ record }) => record.historicalBand === "High" && record.suggestedWorkType);
+  function restoreSystemRecommendations() {
+    const filtered = filteredBudgetRecords().filter(({ record }) => record.suggestedWorkType);
     filtered.forEach(({ index, record }) => {
       state.budgetRecords[index] = BudgetBuilderOps.calculateRecord(record, {
         agency: els.budgetAgency.value,
         workType: record.suggestedWorkType,
-        confirmed: true,
-        selectionSource: "Confirmed historical suggestion",
+        confirmed: false,
+        selectionSource: "System recommendation",
       });
     });
     renderBudgetPreview();
-    setStatus(`ยืนยัน Historical Suggestion ระดับ High จำนวน ${formatNumber(filtered.length)} รายการแล้ว`, "success", 0);
+    setStatus(`คืนค่า Recommended Work Type ให้ ${formatNumber(filtered.length)} รายการแล้ว`, "success", 0);
   }
 
   function updateMode(mode) {
@@ -1331,9 +1365,8 @@
   async function processBudgetBuilder() {
     if (!window.BudgetBuilderOps || !window.BudgetMaster) throw new Error("โหลด Budget Builder module ไม่สำเร็จ กรุณารีเฟรชหน้าเว็บ");
     if (!state.budgetRecords.length) await prepareBudgetDraft();
-    const unconfirmed = state.budgetRecords.filter((record) => !record.workType || !record.workTypeConfirmed);
-    if (unconfirmed.length) throw new Error(`ยังมี ${unconfirmed.length} รายการที่ยังไม่ได้ยืนยันประเภทงาน กรุณายืนยันก่อน Export`);
-    setStatus("กำลังสร้าง Complete File แบบ Values Only...", "working", 55);
+    const reviewCount = state.budgetRecords.filter((record) => record.status !== "Ready").length;
+    setStatus(`กำลังสร้าง Complete File แบบ Values Only${reviewCount ? ` · มี ${formatNumber(reviewCount)} รายการส่งไป Validation` : ""}...`, "working", 55);
     const options = getBudgetBuilderOptions();
     const result = BudgetBuilderOps.buildWorkbookFromRecords(XLSX, state.budgetRecords, { ...options, rawMatrix: state.budgetMatrix });
     const outputName = ensureExtension(els.outputName.value, "xlsx");
@@ -1419,7 +1452,7 @@
   els.budgetCategoryFilter.addEventListener("change", () => { state.budgetPreviewPage = 1; renderBudgetPreview(); });
   els.budgetFamilyFilter.addEventListener("change", () => { state.budgetPreviewPage = 1; renderBudgetPreview(); });
   els.budgetConfidenceFilter.addEventListener("change", () => { state.budgetPreviewPage = 1; renderBudgetPreview(); });
-  els.budgetConfirmSuggested.addEventListener("click", confirmHighConfidenceSuggestions);
+  els.budgetConfirmSuggested.addEventListener("click", restoreSystemRecommendations);
   els.budgetApplyBulk.addEventListener("click", applyBudgetBulkType);
   els.budgetPrevPage.addEventListener("click", () => { state.budgetPreviewPage -= 1; renderBudgetPreview(); });
   els.budgetNextPage.addEventListener("click", () => { state.budgetPreviewPage += 1; renderBudgetPreview(); });
