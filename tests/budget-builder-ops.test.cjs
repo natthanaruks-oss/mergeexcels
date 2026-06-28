@@ -93,6 +93,11 @@ assert.equal(manual.workType, "Recycling HMA-A");
 assert.equal(manual.status, "Ready");
 assert.ok(manual.area > 0);
 const valuesOnly = Ops.buildWorkbookFromRecords(XLSX, [manual], { agency: "DOH", rawMatrix: matrix });
+const dohOutput = valuesOnly.workbook.Sheets.DOH;
+const activityEntry = Object.entries(dohOutput).find(([address, cell]) => address[0] !== "!" && cell && cell.v === "กิจกรรมก่อสร้างทางหลวงแผ่นดิน");
+assert.ok(activityEntry, "DOH main sheet must contain the Activity / Section heading above its projects");
+assert.ok(activityEntry[0].startsWith("C"), "Activity / Section heading must be written in the project description column");
+assert.equal(activityEntry[1].s.fill.fgColor.rgb, "FFF2CC");
 for (const sheetName of valuesOnly.workbook.SheetNames) {
   const sheet = valuesOnly.workbook.Sheets[sheetName];
   for (const [address, cell] of Object.entries(sheet)) {

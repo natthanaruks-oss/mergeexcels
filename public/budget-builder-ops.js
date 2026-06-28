@@ -309,6 +309,7 @@
   const STYLE = {
     title: { font: { bold: true, sz: 14 }, alignment: { horizontal: "left", vertical: "center" } },
     section: { fill: { patternType: "solid", fgColor: { rgb: "FFF200" } }, font: { bold: true, color: { rgb: "000000" } }, alignment: { horizontal: "left", vertical: "center" } },
+    activity: { fill: { patternType: "solid", fgColor: { rgb: "FFF2CC" } }, font: { bold: true, color: { rgb: "000000" } }, alignment: { horizontal: "left", vertical: "center", wrapText: true } },
     headerDark: { fill: { patternType: "solid", fgColor: { rgb: "111111" } }, font: { bold: true, color: { rgb: "FFFFFF" } }, alignment: { horizontal: "center", vertical: "center", wrapText: true } },
     headerYellow: { fill: { patternType: "solid", fgColor: { rgb: "FFF200" } }, font: { bold: true, color: { rgb: "000000" } }, alignment: { horizontal: "center", vertical: "center", wrapText: true } },
     review: { fill: { patternType: "solid", fgColor: { rgb: "FCE8E6" } }, font: { color: { rgb: "B91C1C" } } },
@@ -395,7 +396,19 @@
       rows.push(headers);
       markers.push({ type: "header", row: headerRow });
       const startDataRow = rows.length + 1;
-      categoryRows.forEach((record) => rows.push(recordRow(record, agency)));
+      let previousActivity = null;
+      categoryRows.forEach((record) => {
+        const activity = cleanText(record.activity || "", { roadPack: true });
+        if (activity && activity !== previousActivity) {
+          const activityRow = rows.length + 1;
+          const activityValues = new Array(headers.length).fill("");
+          activityValues[2] = activity;
+          rows.push(activityValues);
+          markers.push({ type: "activity", row: activityRow });
+          previousActivity = activity;
+        }
+        rows.push(recordRow(record, agency));
+      });
       const endDataRow = rows.length;
       if (endDataRow >= startDataRow) dataRanges.push({ start: startDataRow, end: endDataRow });
       rows.push([]);
@@ -412,7 +425,14 @@
     addSheetFormatting(sheet, widths, null, 9);
     applyRowStyle(XLSX, sheet, 2, 1, Math.min(4, lastCol), STYLE.title);
     applyRowStyle(XLSX, sheet, 4, 1, 4, STYLE.headerDark);
-    markers.forEach((marker) => applyRowStyle(XLSX, sheet, marker.row, 0, lastCol, marker.type === "section" ? STYLE.section : STYLE.headerDark));
+    markers.forEach((marker) => {
+      const markerStyle = marker.type === "section" ? STYLE.section : marker.type === "activity" ? STYLE.activity : STYLE.headerDark;
+      applyRowStyle(XLSX, sheet, marker.row, 0, lastCol, markerStyle);
+    });
+    sheet["!rows"] = sheet["!rows"] || [];
+    markers.filter((marker) => marker.type === "activity").forEach((marker) => {
+      sheet["!rows"][marker.row - 1] = { hpt: 22 };
+    });
 
     // หัวกลุ่มผลิตภัณฑ์ใช้สีเหลืองคล้ายไฟล์ต้นกำเนิด
     markers.filter((m) => m.type === "header").forEach((marker) => {

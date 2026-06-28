@@ -363,7 +363,7 @@
     if (policy.blocked) return Promise.reject(new Error(policy.message));
     terminateOptimizeWorker();
     const jobId = state.optimizeJobId;
-    const worker = new Worker(`./optimize-worker.js?v=3.5.2`);
+    const worker = new Worker(`./optimize-worker.js?v=3.5.3`);
     state.optimizeWorker = worker;
 
     return new Promise(async (resolve, reject) => {
