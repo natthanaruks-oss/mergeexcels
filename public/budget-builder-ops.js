@@ -217,19 +217,55 @@
     return records;
   }
 
-  function setNumericFormula(sheet, address, formula, value, format) {
-    sheet[address] = { t: "n", f: formula, v: Number(value) || 0 };
-    if (format) sheet[address].z = format;
+  function calculateRecord(record, options = {}) {
+    const agency = String(options.agency || record.agency || "DOH").toUpperCase() === "DOR" ? "DOR" : "DOH";
+    const copy = { ...record, agency, products: { ...(record.products || {}) } };
+    if (options.workType != null) copy.workType = String(options.workType || "").trim();
+    if (options.percent != null && Number.isFinite(Number(options.percent))) copy.percent = Number(options.percent);
+    const factor = factorMap(agency).get(String(copy.workType || "").trim()) || null;
+    copy.annualBudget = Number(copy.budget || 0) * Number(copy.percent || 0);
+    copy.cost = factor ? Number(factor.cost || 0) : 0;
+    copy.area = copy.cost > 0 ? copy.annualBudget / copy.cost : 0;
+    copy.products = {};
+    for (const key of PRODUCT_KEYS) copy.products[key] = copy.area * Number((factor && factor[key]) || 0);
+
+    const issues = [];
+    if (!copy.province) issues.push("ไม่พบจังหวัด");
+    if (!copy.workType || !factor) issues.push("กรุณาเลือกประเภทงาน");
+    if (!copy.budget) issues.push("ไม่พบงบประมาณ");
+    copy.status = issues.length ? issues.join("; ") : "Ready";
+    copy.confidence = issues.length === 0 ? "Confirmed" : (copy.province && copy.budget ? "Review" : "Low");
+    return copy;
   }
-  function setTextFormula(sheet, address, formula, value) { sheet[address] = { t: "s", f: formula, v: value || "" }; }
-  function addSheetFormatting(sheet, widths, autofilterRef) {
+
+  function recalculateRecords(records, options = {}) {
+    return (Array.isArray(records) ? records : []).map((record) => calculateRecord(record, options));
+  }
+
+  function addSheetFormatting(sheet, widths, autofilterRef, freezeRow) {
     sheet["!cols"] = widths.map((wch) => ({ wch }));
     if (autofilterRef) sheet["!autofilter"] = { ref: autofilterRef };
-    sheet["!views"] = [{ state: "frozen", ySplit: 1, topLeftCell: "A2", activePane: "bottomLeft" }];
+    if (freezeRow) sheet["!views"] = [{ state: "frozen", ySplit: freezeRow, topLeftCell: `A${freezeRow + 1}`, activePane: "bottomLeft" }];
+  }
+
+  const STYLE = {
+    title: { font: { bold: true, sz: 14 }, alignment: { horizontal: "left", vertical: "center" } },
+    section: { fill: { patternType: "solid", fgColor: { rgb: "FFF200" } }, font: { bold: true, color: { rgb: "000000" } }, alignment: { horizontal: "left", vertical: "center" } },
+    headerDark: { fill: { patternType: "solid", fgColor: { rgb: "111111" } }, font: { bold: true, color: { rgb: "FFFFFF" } }, alignment: { horizontal: "center", vertical: "center", wrapText: true } },
+    headerYellow: { fill: { patternType: "solid", fgColor: { rgb: "FFF200" } }, font: { bold: true, color: { rgb: "000000" } }, alignment: { horizontal: "center", vertical: "center", wrapText: true } },
+    review: { fill: { patternType: "solid", fgColor: { rgb: "FCE8E6" } }, font: { color: { rgb: "B91C1C" } } },
+  };
+
+  function applyRowStyle(XLSX, sheet, rowNumber, startCol, endCol, style) {
+    for (let col = startCol; col <= endCol; col += 1) {
+      const address = `${XLSX.utils.encode_col(col)}${rowNumber}`;
+      if (!sheet[address]) sheet[address] = { t: "s", v: "" };
+      sheet[address].s = style;
+    }
   }
 
   function buildSummary(records, agency) {
-    const categories = ["Construction", "Maintenance", "Other"];
+    const categories = ["Construction", "Maintenance"];
     const regions = ["N", "NE", "C", "E", "S", "M", "Unmapped"];
     const byCategory = categories.map((category) => {
       const rows = records.filter((r) => r.category === category);
@@ -250,63 +286,141 @@
     ];
   }
 
-  function buildWorkbook(XLSX, matrix, options = {}) {
+  function agencyHeaders(agency) {
+    if (agency === "DOR") {
+      return ["Region", "ลำดับที่", "รายละเอียดงบประมาณ", "จังหวัด", "%", "งบประมาณ", "ปีงบประมาณใช้", "ประเภทงาน", "พื้นที่ (ตร.ม.)", "AC60-70", "AC40-50", "PMA", "CSS-1/EAP", "CRS-2", "CSS-1h", "CSS-1h (EMA)", "Validation Status", "Source Row"];
+    }
+    return ["Region", "ลำดับที่", "รายละเอียดงบประมาณ", "จังหวัด", "%Progress", "%", "งบประมาณ", "ปีงบประมาณใช้", "ประเภทงาน", "พื้นที่ (ตร.ม.)", "AC60-70", "AC40-50", "PMA", "EAP", "MC-70", "CRS-2", "CSS-1h", "CSS-1h (EMA)", "Validation Status", "Source Row"];
+  }
+
+  function recordRow(record, agency) {
+    if (agency === "DOR") {
+      return [record.region, record.sequence, record.description, record.province, record.percent, record.budget, record.annualBudget, record.workType, record.area,
+        record.products["AC60-70"], record.products["AC40-50"], record.products.PMA, record.products.EAP_CSS1,
+        record.products["CRS-2"], record.products["CSS-1h"], record.products["CSS-1h (EMA)"], record.status, record.sourceRow];
+    }
+    return [record.region, record.sequence, record.description, record.province, record.progress, record.percent, record.budget, record.annualBudget, record.workType, record.area,
+      record.products["AC60-70"], record.products["AC40-50"], record.products.PMA, record.products.EAP_CSS1, record.products["MC-70"],
+      record.products["CRS-2"], record.products["CSS-1h"], record.products["CSS-1h (EMA)"], record.status, record.sourceRow];
+  }
+
+  function buildOriginLayoutSheet(XLSX, records, agency) {
+    const headers = agencyHeaders(agency);
+    const rows = [];
+    const markers = [];
+    const dataRanges = [];
+    const totalBudget = records.reduce((sum, r) => sum + Number(r.budget || 0), 0);
+    const annualBudget = records.reduce((sum, r) => sum + Number(r.annualBudget || 0), 0);
+    rows.push([]);
+    rows.push(["", "รายละเอียดงบประมาณ", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""]);
+    rows.push(["", "Remark : Work Type selected in Menu 09 · Values Only (No linked formulas)"]);
+    rows.push(["", "สรุป", "โครงการ", "งบประมาณ", "ปีงบประมาณใช้"]);
+    rows.push(["", "Construction", records.filter((r) => r.category === "Construction").length,
+      records.filter((r) => r.category === "Construction").reduce((s, r) => s + r.budget, 0),
+      records.filter((r) => r.category === "Construction").reduce((s, r) => s + r.annualBudget, 0)]);
+    rows.push(["", "Maintenance", records.filter((r) => r.category === "Maintenance").length,
+      records.filter((r) => r.category === "Maintenance").reduce((s, r) => s + r.budget, 0),
+      records.filter((r) => r.category === "Maintenance").reduce((s, r) => s + r.annualBudget, 0)]);
+    rows.push(["", "รวม", records.length, totalBudget, annualBudget]);
+    rows.push([]);
+
+    for (const category of ["Construction", "Maintenance"]) {
+      const categoryRows = records.filter((r) => r.category === category);
+      const sectionRow = rows.length + 1;
+      rows.push(["", category]);
+      markers.push({ type: "section", row: sectionRow });
+      const headerRow = rows.length + 1;
+      rows.push(headers);
+      markers.push({ type: "header", row: headerRow });
+      const startDataRow = rows.length + 1;
+      categoryRows.forEach((record) => rows.push(recordRow(record, agency)));
+      const endDataRow = rows.length;
+      if (endDataRow >= startDataRow) dataRanges.push({ start: startDataRow, end: endDataRow });
+      rows.push([]);
+    }
+
+    const sheet = XLSX.utils.aoa_to_sheet(rows);
+    const lastCol = headers.length - 1;
+    const ref = XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: rows.length - 1, c: lastCol } });
+    sheet["!ref"] = ref;
+    sheet["!merges"] = [{ s: { r: 1, c: 1 }, e: { r: 1, c: Math.min(4, lastCol) } }];
+    const widths = agency === "DOR"
+      ? [8, 9, 72, 20, 10, 17, 17, 38, 16, 13, 13, 13, 14, 12, 12, 14, 28, 12]
+      : [8, 9, 72, 20, 12, 10, 17, 17, 38, 16, 13, 13, 13, 14, 12, 12, 12, 14, 28, 12];
+    addSheetFormatting(sheet, widths, null, 9);
+    applyRowStyle(XLSX, sheet, 2, 1, Math.min(4, lastCol), STYLE.title);
+    applyRowStyle(XLSX, sheet, 4, 1, 4, STYLE.headerDark);
+    markers.forEach((marker) => applyRowStyle(XLSX, sheet, marker.row, 0, lastCol, marker.type === "section" ? STYLE.section : STYLE.headerDark));
+
+    // หัวกลุ่มผลิตภัณฑ์ใช้สีเหลืองคล้ายไฟล์ต้นกำเนิด
+    markers.filter((m) => m.type === "header").forEach((marker) => {
+      const productStart = agency === "DOR" ? 8 : 9;
+      const productEnd = agency === "DOR" ? 15 : 17;
+      applyRowStyle(XLSX, sheet, marker.row, productStart, productEnd, STYLE.headerYellow);
+    });
+
+    // รูปแบบตัวเลขในส่วนสรุป
+    for (let r = 5; r <= 7; r += 1) {
+      for (const c of [2, 3, 4]) {
+        const cell = sheet[`${XLSX.utils.encode_col(c)}${r}`];
+        if (cell && typeof cell.v === "number") cell.z = c === 2 ? "#,##0" : "#,##0.00";
+      }
+    }
+
+    // รูปแบบตัวเลขใน Detail และไฮไลต์แถวที่ต้องตรวจ
+    const percentCols = agency === "DOR" ? [4] : [4, 5];
+    const statusIndex = agency === "DOR" ? 16 : 18;
+    dataRanges.forEach((range) => {
+      for (let r = range.start; r <= range.end; r += 1) {
+        const row = rows[r - 1] || [];
+        for (let c = 0; c < row.length; c += 1) {
+          const cell = sheet[`${XLSX.utils.encode_col(c)}${r}`];
+          if (!cell || typeof cell.v !== "number") continue;
+          cell.z = percentCols.includes(c) ? "0%" : "#,##0.00";
+        }
+        if (row[statusIndex] && row[statusIndex] !== "Ready") applyRowStyle(XLSX, sheet, r, 0, lastCol, STYLE.review);
+      }
+    });
+    return sheet;
+  }
+
+  function buildWorkbookFromRecords(XLSX, inputRecords, options = {}) {
     if (!XLSX || !XLSX.utils) throw new Error("XLSX library is required.");
     const agency = String(options.agency || "DOH").toUpperCase() === "DOR" ? "DOR" : "DOH";
-    const records = extractProjectsFromMatrix(matrix, options);
-    if (!records.length) throw new Error("ไม่พบรายการโครงการที่มีจำนวนเงิน กรุณาตรวจ Sheet หรือรูปแบบข้อมูลต้นทาง");
+    const records = recalculateRecords(inputRecords, { agency });
+    if (!records.length) throw new Error("ไม่พบรายการโครงการ กรุณาวิเคราะห์รายการก่อน");
 
     const workbook = XLSX.utils.book_new();
-    const factorRows = BudgetMaster.factors[agency] || [];
-    const factorEnd = factorRows.length + 1;
-    const regionEnd = BudgetMaster.regions.length + 1;
-    const projectHeaders = ["Region", "Sales Code", "ลำดับ", "รายละเอียดงบประมาณ", "จังหวัด", "หมวดงบ", "%Progress", "%", "งบประมาณ", "งบประมาณปีใช้", "ประเภทงาน", "Cost/ตร.ม.", "พื้นที่ (ตร.ม.)", "AC60-70", "AC40-50", "PMA", "EAP/CSS-1", "MC-70", "CRS-2", "CSS-1h", "CSS-1h (EMA)", "Validation Status", "Confidence", "Source Row"];
-    const projectRows = [projectHeaders];
-    for (const r of records) {
-      projectRows.push([r.region, r.salesCode, r.sequence, r.description, r.province, r.category, r.progress, r.percent, r.budget, r.annualBudget, r.workType, r.cost, r.area, r.products["AC60-70"], r.products["AC40-50"], r.products.PMA, r.products.EAP_CSS1, r.products["MC-70"], r.products["CRS-2"], r.products["CSS-1h"], r.products["CSS-1h (EMA)"], r.status, r.confidence, r.sourceRow]);
-    }
-    const projectsSheet = XLSX.utils.aoa_to_sheet(projectRows);
-    for (let rowIndex = 2; rowIndex <= records.length + 1; rowIndex += 1) {
-      const r = records[rowIndex - 2];
-      setTextFormula(projectsSheet, `A${rowIndex}`, `IFERROR(VLOOKUP(E${rowIndex},'Region Mapping'!$A$2:$D$${regionEnd},4,FALSE),\"\")`, r.region);
-      setTextFormula(projectsSheet, `B${rowIndex}`, `IFERROR(VLOOKUP(E${rowIndex},'Region Mapping'!$A$2:$D$${regionEnd},3,FALSE),\"\")`, r.salesCode);
-      setNumericFormula(projectsSheet, `J${rowIndex}`, `I${rowIndex}*H${rowIndex}`, r.annualBudget, "#,##0.00");
-      setNumericFormula(projectsSheet, `L${rowIndex}`, `IFERROR(VLOOKUP(K${rowIndex},'Factor Master'!$A$2:$J$${factorEnd},2,FALSE),0)`, r.cost, "#,##0.00");
-      setNumericFormula(projectsSheet, `M${rowIndex}`, `IFERROR(J${rowIndex}/L${rowIndex},0)`, r.area, "#,##0.00");
-      for (let offset = 0; offset < PRODUCT_KEYS.length; offset += 1) {
-        const address = `${XLSX.utils.encode_col(13 + offset)}${rowIndex}`;
-        setNumericFormula(projectsSheet, address, `IFERROR(M${rowIndex}*VLOOKUP(K${rowIndex},'Factor Master'!$A$2:$J$${factorEnd},${3 + offset},FALSE),0)`, r.products[PRODUCT_KEYS[offset]], "#,##0.00");
-      }
-      if (projectsSheet[`H${rowIndex}`]) projectsSheet[`H${rowIndex}`].z = "0%";
-      if (projectsSheet[`I${rowIndex}`]) projectsSheet[`I${rowIndex}`].z = "#,##0.00";
-    }
-    addSheetFormatting(projectsSheet, [8, 13, 8, 68, 20, 16, 12, 10, 16, 17, 38, 14, 16, 13, 13, 13, 14, 12, 12, 12, 14, 28, 12, 12], `A1:X${records.length + 1}`);
+    const projectsSheet = buildOriginLayoutSheet(XLSX, records, agency);
     XLSX.utils.book_append_sheet(workbook, projectsSheet, agency);
 
     const summarySheet = XLSX.utils.aoa_to_sheet(buildSummary(records, agency));
-    addSheetFormatting(summarySheet, [28, 16, 18, 18], null);
+    addSheetFormatting(summarySheet, [30, 18, 18, 18], null, 1);
     XLSX.utils.book_append_sheet(workbook, summarySheet, "Summary");
 
-    const validationRows = [["ลำดับ", "รายละเอียดงบประมาณ", "จังหวัด", "งบประมาณ", "ประเภทงาน", "Validation Status", "Confidence", "Source Row"]];
-    records.filter((r) => r.status !== "Ready").forEach((r) => validationRows.push([r.sequence, r.description, r.province, r.budget, r.workType, r.status, r.confidence, r.sourceRow]));
-    if (validationRows.length === 1) validationRows.push(["", "ไม่พบรายการที่ต้องตรวจสอบ", "", "", "", "Ready", "High", ""]);
+    const validationRows = [["ลำดับ", "รายละเอียดงบประมาณ", "จังหวัด", "งบประมาณ", "ประเภทงาน", "Validation Status", "Source Row"]];
+    records.filter((r) => r.status !== "Ready").forEach((r) => validationRows.push([r.sequence, r.description, r.province, r.budget, r.workType, r.status, r.sourceRow]));
+    if (validationRows.length === 1) validationRows.push(["", "ไม่พบรายการที่ต้องตรวจสอบ", "", "", "", "Ready", ""]);
     const validationSheet = XLSX.utils.aoa_to_sheet(validationRows);
-    addSheetFormatting(validationSheet, [8, 70, 20, 16, 38, 32, 12, 12], `A1:H${validationRows.length}`);
+    addSheetFormatting(validationSheet, [9, 75, 20, 17, 40, 32, 12], `A1:G${validationRows.length}`, 1);
     XLSX.utils.book_append_sheet(workbook, validationSheet, "Validation");
 
-    const factorData = [["Work Type", "Cost/ตร.ม.", "AC60-70", "AC40-50", "PMA", "EAP/CSS-1", "MC-70", "CRS-2", "CSS-1h", "CSS-1h (EMA)"], ...factorRows.map((f) => [f.workType, f.cost, f["AC60-70"], f["AC40-50"], f.PMA, f.EAP_CSS1, f["MC-70"], f["CRS-2"], f["CSS-1h"], f["CSS-1h (EMA)"]])];
+    const factorRows = BudgetMaster.factors[agency] || [];
+    const factorData = [["Work Type", "Cost/ตร.ม.", "AC60-70", "AC40-50", "PMA", "EAP/CSS-1", "MC-70", "CRS-2", "CSS-1h", "CSS-1h (EMA)"],
+      ...factorRows.map((f) => [f.workType, f.cost, f["AC60-70"], f["AC40-50"], f.PMA, f.EAP_CSS1, f["MC-70"], f["CRS-2"], f["CSS-1h"], f["CSS-1h (EMA)"]])];
     const factorSheet = XLSX.utils.aoa_to_sheet(factorData);
-    addSheetFormatting(factorSheet, [42, 14, 12, 12, 12, 14, 12, 12, 12, 14], `A1:J${factorData.length}`);
+    addSheetFormatting(factorSheet, [42, 14, 12, 12, 12, 14, 12, 12, 12, 14], `A1:J${factorData.length}`, 1);
     XLSX.utils.book_append_sheet(workbook, factorSheet, "Factor Master");
 
     const regionRows = [["Province", "Province English", "Sales Code", "Region"], ...BudgetMaster.regions.map((r) => [r.province, r.english, r.salesCode, r.region])];
     const regionSheet = XLSX.utils.aoa_to_sheet(regionRows);
-    addSheetFormatting(regionSheet, [22, 24, 14, 10], `A1:D${regionRows.length}`);
+    addSheetFormatting(regionSheet, [22, 24, 14, 10], `A1:D${regionRows.length}`, 1);
     XLSX.utils.book_append_sheet(workbook, regionSheet, "Region Mapping");
 
-    const rawRows = [["Source Row", "Raw Data"], ...(Array.isArray(matrix) ? matrix : []).map((row, index) => [index + 1, (Array.isArray(row) ? row : [row]).map((v) => cleanText(v, options)).filter(Boolean).join(" | ")])];
+    const matrix = Array.isArray(options.rawMatrix) ? options.rawMatrix : [];
+    const rawRows = [["Source Row", "Raw Data"], ...matrix.map((row, index) => [index + 1, (Array.isArray(row) ? row : [row]).map((v) => cleanText(v, options)).filter(Boolean).join(" | ")])];
     const rawSheet = XLSX.utils.aoa_to_sheet(rawRows);
-    addSheetFormatting(rawSheet, [12, 100], `A1:B${rawRows.length}`);
+    addSheetFormatting(rawSheet, [12, 110], `A1:B${rawRows.length}`, 1);
     XLSX.utils.book_append_sheet(workbook, rawSheet, "Raw Source");
 
     return { workbook, records, report: {
@@ -317,5 +431,10 @@
     } };
   }
 
-  return { PRODUCT_KEYS, cleanText, parseAmount, detectProvince, classifyCategory, suggestWorkType, extractProjectsFromMatrix, buildWorkbook };
+  function buildWorkbook(XLSX, matrix, options = {}) {
+    const records = extractProjectsFromMatrix(matrix, options);
+    return buildWorkbookFromRecords(XLSX, records, { ...options, rawMatrix: matrix });
+  }
+
+  return { PRODUCT_KEYS, cleanText, parseAmount, detectProvince, classifyCategory, suggestWorkType, extractProjectsFromMatrix, calculateRecord, recalculateRecords, buildWorkbookFromRecords, buildWorkbook };
 });

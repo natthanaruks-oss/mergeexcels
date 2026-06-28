@@ -117,3 +117,13 @@ m = T.buildMatrixFromItems([
 assert.equal(m[0][0], "(2)งานบำรุงตามกำหนดเวลาทล. 4", "road mark repair, got " + m[0][0]);
 assert.equal(m[0].length, 1, "standalone marks must not create extra columns");
 console.log("✅ 11 detached Thai mark-only cells removed + road words repaired");
+
+// 12) Road-budget normalization keeps a stable two-column layout and drops stray mark columns
+m = T.normalizeRoadBudgetMatrix([
+  ["(10) สาย ทล. 2037 ตอน ภูเขียว - เกษตรสมบูรณ์ จ.ชัยภูมิ", "", "85,000,000 บาท", "", "ิ ื", "ี่"],
+  ["กิจกรรมบำรุงรักษาทางหลวง", "", "ั้"],
+]);
+assert.deepEqual(m[0], ["(10) สาย ทล. 2037 ตอน ภูเขียว - เกษตรสมบูรณ์ จ.ชัยภูมิ", "85,000,000 บาท"]);
+assert.deepEqual(m[1], ["กิจกรรมบำรุงรักษาทางหลวง"]);
+assert.ok(m.every((row) => row.length <= 2), "road-budget rows must stay within two columns");
+console.log("✅ 12 road-budget output normalized to stable columns");

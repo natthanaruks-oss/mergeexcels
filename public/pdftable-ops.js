@@ -260,6 +260,41 @@
     }
   }
 
+  // จัดรูปแบบผลลัพธ์เอกสารงบงานถนนให้คงที่ ลดปัญหา glyph ไทยลอย
+  // ไปสร้างคอลัมน์ด้านขวาจำนวนมาก โดยเก็บโครงสร้างหลักเป็น
+  // [รายละเอียดโครงการ, จำนวนเงิน] สำหรับแถวที่มีงบประมาณ
+  // และ [ข้อความ] สำหรับหัวข้อ/บรรทัดทั่วไป
+  function normalizeRoadBudgetMatrix(matrix, options = {}) {
+    if (!Array.isArray(matrix)) return [];
+    const detachedMarksOnly = /^[\u0E31\u0E34-\u0E3A\u0E47-\u0E4E]+$/u;
+    const amountRe = options.amountRegex || /-?\d[\d,]*(?:\.\d+)?\s*(?:บาท|บ\.)\s*$/i;
+    const commaAmountRe = /-?\d{1,3}(?:,\d{3})+(?:\.\d+)?\s*$/;
+    const cleanCell = (value) => {
+      const text = value == null ? "" : String(value).replace(/\s+/g, " ").trim();
+      if (!text) return "";
+      return detachedMarksOnly.test(text.replace(/\s+/g, "")) ? "" : text;
+    };
+
+    return matrix.map((rawRow) => {
+      const cells = (Array.isArray(rawRow) ? rawRow : [rawRow]).map(cleanCell).filter(Boolean);
+      if (!cells.length) return [""];
+
+      let amountIndex = -1;
+      for (let i = cells.length - 1; i >= 0; i -= 1) {
+        if (amountRe.test(cells[i]) || commaAmountRe.test(cells[i])) { amountIndex = i; break; }
+      }
+
+      if (amountIndex >= 0) {
+        const amount = cells[amountIndex];
+        const description = cells.filter((_, i) => i !== amountIndex).join(" ").replace(/\s+/g, " ").trim();
+        return [description, amount];
+      }
+
+      // บรรทัดที่ไม่มีจำนวนเงินให้รวมเป็นคอลัมน์เดียว เพื่อให้ทุกหน้ามีรูปแบบเดียวกัน
+      return [cells.join(" ").replace(/\s+/g, " ").trim()];
+    });
+  }
+
   /**
    * Merge wrapped description lines into one logical row.
    * Auto-detects "amount tables": if the last column is mostly amounts (e.g. "2,353,000 บาท"),
@@ -321,5 +356,5 @@
     return out.length ? out : matrix;
   }
 
-  return { buildMatrixFromItems, mergeWrappedRows, repairDetachedSaraAm, clusterAnchors, columnFromBoundaries, median };
+  return { buildMatrixFromItems, normalizeRoadBudgetMatrix, mergeWrappedRows, repairDetachedSaraAm, clusterAnchors, columnFromBoundaries, median };
 });

@@ -1,4 +1,4 @@
-# MergeExcels v3.4.1 — Excel, PDF & Budget Intelligence Toolkit
+# MergeExcels v3.4.2 — Excel, PDF & Budget Intelligence Toolkit
 
 Web Application สำหรับจัดการไฟล์ Excel และ PDF แบบ **Client-side 100%**
 ไฟล์ของผู้ใช้ถูกประมวลผลในเบราว์เซอร์และไม่ถูกอัปโหลดขึ้น Application Server
@@ -43,14 +43,15 @@ Web Application สำหรับจัดการไฟล์ Excel และ
 
 - เลือกหน่วยงาน `DOH` หรือ `DOR` ต่อการประมวลผลหนึ่งครั้ง
 - ตรวจจับจังหวัดและ Mapping เป็น Region / Sales Code จาก 77 จังหวัด
-- แยกหมวด Construction / Maintenance และเสนอ Work Type เบื้องต้น
+- แยกหมวด Construction / Maintenance และแสดงรายการให้ผู้ใช้เลือก Work Type รายโครงการ
 - กำหนด % งบประมาณปีใช้สำหรับ Construction และ Maintenance
 - คำนวณพื้นที่และปริมาณ AC60-70, AC40-50, PMA, EAP/CSS-1, MC-70, CRS-2, CSS-1h และ EMA
 - กรอง Narrative, Budget Summary, Land Compensation, Expropriation, Design และ Supervision ที่ไม่สร้าง Material Demand โดยตรง
 - สร้าง 6 Sheets: `DOH/DOR`, `Summary`, `Validation`, `Factor Master`, `Region Mapping`, `Raw Source`
-- สูตรในไฟล์ผลลัพธ์เชื่อมกับ Factor Master และ Region Mapping ภายในไฟล์ จึงไม่พึ่ง External Workbook
+- คำนวณ Factor ใน Browser แล้วเขียนผลลัพธ์เป็น Values Only ไม่มีสูตร VLOOKUP หรือ External Link
+- จัด Main Sheet แยก Construction / Maintenance และเรียงคอลัมน์ตาม Complete File ต้นกำเนิด
 
-> Auto Classification เป็นข้อเสนอเบื้องต้น ผู้ใช้ต้องตรวจ `Validation` และทบทวน Work Type / % ก่อนใช้เป็น Demand Forecast หรือ Management Report
+> Work Type เริ่มต้นเป็นข้อเสนอเบื้องต้น ผู้ใช้สามารถแก้ทีละรายการหรือกำหนดแบบกลุ่มในหน้าจอ ก่อน Export เป็นค่าคงที่
 
 ## โครงสร้างสำคัญ
 
@@ -118,7 +119,7 @@ Cloudflare Build Settings:
 3. ลาก **ทุกไฟล์และโฟลเดอร์ที่อยู่ข้างใน** ขึ้น Repo เดิม
 4. ต้องเห็น `public/`, `package.json`, `package-lock.json`, `wrangler.jsonc` และ `.node-version` ที่หน้า Root
 5. Commit แล้วรอ Cloudflare Deploy อัตโนมัติ
-6. เปิดเว็บและตรวจ Version Badge ต้องเป็น `v3.4.1`
+6. เปิดเว็บและตรวจ Version Badge ต้องเป็น `v3.4.2`
 
 ## Security Notes
 

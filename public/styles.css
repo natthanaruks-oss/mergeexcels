@@ -496,3 +496,23 @@ footer { padding: 24px; color: var(--muted); text-align: center; font-size: 12px
 .builder-info strong { font-size: 13px; }
 @media (max-width: 900px) { .budget-builder-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 760px) { .budget-builder-grid { grid-template-columns: 1fr; } .budget-builder-grid .wide { grid-column: span 1; } }
+
+
+/* Menu 09 — per-project Work Type review */
+.budget-review-actions { display:grid; grid-template-columns:auto minmax(180px,1fr) minmax(150px,.55fr) minmax(240px,1.2fr) auto; gap:12px; align-items:end; margin-top:16px; padding-top:16px; border-top:1px solid var(--line,#dbe3ee); }
+.budget-review-actions .secondary-button { min-height:42px; white-space:nowrap; }
+.budget-preview { margin-top:16px; border:1px solid #d8e0ea; border-radius:14px; background:#fff; overflow:hidden; }
+.budget-preview-head { display:flex; justify-content:space-between; gap:16px; align-items:center; padding:14px 16px; background:#f7f9fc; border-bottom:1px solid #e2e8f0; }
+.budget-preview-head span { color:#64748b; font-size:12px; }
+.budget-table-wrap { overflow:auto; max-height:520px; }
+.budget-review-table { width:100%; border-collapse:collapse; min-width:1080px; font-size:12px; }
+.budget-review-table th, .budget-review-table td { border-bottom:1px solid #e7edf4; padding:8px 10px; vertical-align:top; text-align:left; }
+.budget-review-table th { position:sticky; top:0; z-index:1; background:#111827; color:#fff; }
+.budget-review-table td:nth-child(3) { min-width:390px; white-space:normal; }
+.budget-review-table select { width:100%; min-width:260px; padding:7px 8px; border:1px solid #cbd5e1; border-radius:8px; background:#fff; }
+.budget-review-table tr.needs-review { background:#fff7ed; }
+.budget-pagination { display:flex; justify-content:center; align-items:center; gap:14px; padding:12px 16px; background:#f8fafc; }
+.budget-pagination button { border:1px solid #cbd5e1; background:#fff; border-radius:8px; padding:7px 12px; cursor:pointer; }
+.budget-pagination button:disabled { opacity:.45; cursor:not-allowed; }
+@media (max-width: 1100px) { .budget-review-actions { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+@media (max-width: 760px) { .budget-review-actions { grid-template-columns:1fr; } .budget-preview-head { align-items:flex-start; flex-direction:column; } }

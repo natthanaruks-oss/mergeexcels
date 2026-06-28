@@ -142,6 +142,10 @@
     optimizeWorker: null,
     optimizeReject: null,
     optimizeJobId: 0,
+    budgetRecords: [],
+    budgetMatrix: [],
+    budgetPreviewPage: 1,
+    budgetPreviewPageSize: 25,
   };
 
   const PDFJS = typeof window !== "undefined" ? window.pdfjsLib : null;
@@ -177,6 +181,17 @@
     defaultMaintenanceType: document.getElementById("defaultMaintenanceType"),
     projectRowsOnly: document.getElementById("projectRowsOnly"),
     roadBudgetOnly: document.getElementById("roadBudgetOnly"),
+    budgetPrepareButton: document.getElementById("budgetPrepareButton"),
+    budgetSearch: document.getElementById("budgetSearch"),
+    budgetCategoryFilter: document.getElementById("budgetCategoryFilter"),
+    budgetBulkType: document.getElementById("budgetBulkType"),
+    budgetApplyBulk: document.getElementById("budgetApplyBulk"),
+    budgetPreviewPanel: document.getElementById("budgetPreviewPanel"),
+    budgetPreviewSummary: document.getElementById("budgetPreviewSummary"),
+    budgetPreviewBody: document.getElementById("budgetPreviewBody"),
+    budgetPrevPage: document.getElementById("budgetPrevPage"),
+    budgetNextPage: document.getElementById("budgetNextPage"),
+    budgetPageInfo: document.getElementById("budgetPageInfo"),
     optimizeMode: document.getElementById("optimizeMode"),
     optimizeFormat: document.getElementById("optimizeFormat"),
     removeComments: document.getElementById("removeComments"),
@@ -345,7 +360,7 @@
     if (policy.blocked) return Promise.reject(new Error(policy.message));
     terminateOptimizeWorker();
     const jobId = state.optimizeJobId;
-    const worker = new Worker(`./optimize-worker.js?v=3.4.1`);
+    const worker = new Worker(`./optimize-worker.js?v=3.4.2`);
     state.optimizeWorker = worker;
 
     return new Promise(async (resolve, reject) => {
@@ -501,6 +516,104 @@
     };
   }
 
+  function clearBudgetPreview(message = "ยังไม่ได้วิเคราะห์รายการ") {
+    state.budgetRecords = [];
+    state.budgetMatrix = [];
+    state.budgetPreviewPage = 1;
+    if (els.budgetPreviewPanel) els.budgetPreviewPanel.classList.add("hidden");
+    if (els.budgetPreviewBody) els.budgetPreviewBody.innerHTML = "";
+    if (els.budgetPreviewSummary) els.budgetPreviewSummary.textContent = message;
+    if (state.mode === "budgetBuilder") renderFiles();
+  }
+
+  function budgetWorkTypes() {
+    const agency = els.budgetAgency.value === "DOR" ? "DOR" : "DOH";
+    return (window.BudgetMaster && window.BudgetMaster.factors[agency] || []).map((item) => item.workType);
+  }
+
+  function filteredBudgetRecords() {
+    const search = String(els.budgetSearch && els.budgetSearch.value || "").trim().toLowerCase();
+    const category = String(els.budgetCategoryFilter && els.budgetCategoryFilter.value || "ALL");
+    return state.budgetRecords.map((record, index) => ({ record, index })).filter(({ record }) => {
+      if (category !== "ALL" && record.category !== category) return false;
+      if (!search) return true;
+      return `${record.description} ${record.province} ${record.workType}`.toLowerCase().includes(search);
+    });
+  }
+
+  function renderBudgetPreview() {
+    if (!els.budgetPreviewPanel) return;
+    const workTypes = budgetWorkTypes();
+    const filtered = filteredBudgetRecords();
+    const pageSize = state.budgetPreviewPageSize;
+    const pages = Math.max(1, Math.ceil(filtered.length / pageSize));
+    state.budgetPreviewPage = Math.max(1, Math.min(state.budgetPreviewPage, pages));
+    const start = (state.budgetPreviewPage - 1) * pageSize;
+    const current = filtered.slice(start, start + pageSize);
+    const optionHtml = (selected) => [`<option value="">— กรุณาเลือกประเภทงาน —</option>`, ...workTypes.map((name) => `<option value="${escapeHtml(name)}" ${name === selected ? "selected" : ""}>${escapeHtml(name)}</option>`)].join("");
+
+    els.budgetPreviewBody.innerHTML = current.map(({ record, index }) => `
+      <tr class="${record.status === "Ready" ? "" : "needs-review"}">
+        <td>${formatNumber(record.sequence)}</td>
+        <td>${escapeHtml(record.category)}</td>
+        <td>${escapeHtml(record.description)}</td>
+        <td>${escapeHtml(record.province || "-")}</td>
+        <td>${formatNumber(record.budget)}</td>
+        <td><select class="budget-worktype-select" data-index="${index}">${optionHtml(record.workType)}</select></td>
+        <td>${escapeHtml(record.status)}</td>
+      </tr>`).join("");
+
+    const ready = state.budgetRecords.filter((r) => r.status === "Ready").length;
+    const unselected = state.budgetRecords.filter((r) => !r.workType).length;
+    els.budgetPreviewSummary.textContent = `${formatNumber(state.budgetRecords.length)} โครงการ · พร้อม ${formatNumber(ready)} · ยังไม่เลือกประเภทงาน ${formatNumber(unselected)}`;
+    els.budgetPageInfo.textContent = `หน้า ${state.budgetPreviewPage} / ${pages} · แสดง ${formatNumber(filtered.length)} รายการ`;
+    els.budgetPrevPage.disabled = state.budgetPreviewPage <= 1;
+    els.budgetNextPage.disabled = state.budgetPreviewPage >= pages;
+    els.budgetPreviewPanel.classList.remove("hidden");
+
+    const currentBulk = els.budgetBulkType.value;
+    els.budgetBulkType.innerHTML = `<option value="">เลือกประเภทงาน</option>${workTypes.map((name) => `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`).join("")}`;
+    if (workTypes.includes(currentBulk)) els.budgetBulkType.value = currentBulk;
+    renderFiles();
+  }
+
+  async function prepareBudgetDraft() {
+    if (!window.BudgetBuilderOps || !window.BudgetMaster) throw new Error("โหลด Budget Builder module ไม่สำเร็จ");
+    const input = state.parsed[0];
+    if (!input || !input.workbook) throw new Error("กรุณาเลือกไฟล์ Excel ต้นทาง");
+    const sheetName = els.budgetSourceSheet.value || input.workbook.SheetNames[0];
+    const worksheet = input.workbook.Sheets[sheetName];
+    if (!worksheet) throw new Error("ไม่พบ Source Sheet ที่เลือก");
+    setStatus("กำลังวิเคราะห์รายการโครงการ...", "working", 35);
+    const matrix = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: "", raw: true, blankrows: false });
+    const options = getBudgetBuilderOptions();
+    const records = BudgetBuilderOps.extractProjectsFromMatrix(matrix, options).map((record) => BudgetBuilderOps.calculateRecord(record, { agency: options.agency }));
+    if (!records.length) throw new Error("ไม่พบรายการโครงการที่มีจำนวนเงิน");
+    state.budgetMatrix = matrix;
+    state.budgetRecords = records;
+    state.budgetPreviewPage = 1;
+    renderBudgetPreview();
+    setStatus(`พบ ${formatNumber(records.length)} รายการ กรุณาตรวจและเลือกประเภทงานก่อน Export`, "success", 0);
+  }
+
+  function updateBudgetRecordWorkType(index, workType) {
+    const record = state.budgetRecords[index];
+    if (!record) return;
+    state.budgetRecords[index] = BudgetBuilderOps.calculateRecord(record, { agency: els.budgetAgency.value, workType });
+    renderBudgetPreview();
+  }
+
+  function applyBudgetBulkType() {
+    const workType = els.budgetBulkType.value;
+    if (!workType) return;
+    const filtered = filteredBudgetRecords();
+    filtered.forEach(({ index, record }) => {
+      state.budgetRecords[index] = BudgetBuilderOps.calculateRecord(record, { agency: els.budgetAgency.value, workType });
+    });
+    renderBudgetPreview();
+    setStatus(`กำหนดประเภทงานให้ ${formatNumber(filtered.length)} รายการแล้ว`, "success", 0);
+  }
+
   function updateMode(mode) {
     if (state.busy || !MODES[mode]) return;
     state.mode = mode;
@@ -555,6 +668,10 @@
     state.optimizeAnalysis = null;
     state.optimizeAnalysisError = "";
     state.optimizeReport = null;
+    state.budgetRecords = [];
+    state.budgetMatrix = [];
+    state.budgetPreviewPage = 1;
+    if (els.budgetPreviewPanel) els.budgetPreviewPanel.classList.add("hidden");
     clearPdfState();
     els.fileInput.value = "";
     els.analysisPanel.classList.add("hidden");
@@ -672,7 +789,8 @@
       } else if (state.mode === "budgetBuilder") {
         populateBudgetSourceSheets();
         populateBudgetWorkTypes();
-        setStatus("อ่านไฟล์เรียบร้อย เลือกหน่วยงาน Sheet และสมมติฐานก่อนสร้าง Complete File", "success", 0);
+        clearBudgetPreview();
+        await prepareBudgetDraft();
       } else {
         setStatus("อ่านไฟล์เรียบร้อย พร้อมประมวลผล", "success", 0);
       }
@@ -748,6 +866,8 @@
       ready = state.pages.length >= 1;
     } else if (state.mode === "optimizeExcel") {
       ready = state.parsed.length === 1 && !!state.optimizeAnalysis;
+    } else if (state.mode === "budgetBuilder") {
+      ready = state.parsed.length === 1 && state.budgetRecords.length > 0;
     } else {
       ready = state.parsed.length >= (config.minimumFiles || 1);
     }
@@ -1013,7 +1133,11 @@
             return { str: it.str, x: tr[4], y: tr[5], w: it.width || 0, h: it.height || Math.abs(tr[3]) || 10 };
           });
         const roadPack = !!(els.roadMode && els.roadMode.checked);
-        const matrix = PdfTableOps.mergeWrappedRows(PdfTableOps.buildMatrixFromItems(items, { roadPack }));
+        let matrix = PdfTableOps.buildMatrixFromItems(items, { roadPack });
+        if (roadPack && PdfTableOps.normalizeRoadBudgetMatrix) {
+          matrix = PdfTableOps.normalizeRoadBudgetMatrix(matrix);
+        }
+        matrix = PdfTableOps.mergeWrappedRows(matrix);
         const header = multiFile ? `— ${plan.base} หน้า ${p} —` : `— หน้า ${p} —`;
         allRows.push([header]);
         matrix.forEach((r) => allRows.push(r));
@@ -1027,14 +1151,19 @@
     const workbook = XLSX.utils.book_new();
     const worksheet = XLSX.utils.aoa_to_sheet(allRows);
     const colCount = allRows.reduce((mx, r) => Math.max(mx, r.length), 0) || 1;
-    worksheet["!cols"] = Array.from({ length: colCount }, (_, col) => {
-      let max = 8;
-      for (let r = 0; r < allRows.length; r += 1) {
-        const v = allRows[r][col];
-        if (v != null) max = Math.max(max, String(v).length);
-      }
-      return { wch: Math.min(max + 2, 60) };
-    });
+    const roadPackEnabled = !!(els.roadMode && els.roadMode.checked);
+    if (roadPackEnabled && colCount <= 2) {
+      worksheet["!cols"] = [{ wch: 100 }, { wch: 22 }];
+    } else {
+      worksheet["!cols"] = Array.from({ length: colCount }, (_, col) => {
+        let max = 8;
+        for (let r = 0; r < allRows.length; r += 1) {
+          const v = allRows[r][col];
+          if (v != null) max = Math.max(max, String(v).length);
+        }
+        return { wch: Math.min(max + 2, 60) };
+      });
+    }
     XLSX.utils.book_append_sheet(workbook, worksheet, "PDF Data");
 
     const outputName = ensureExtension(els.outputName.value, "xlsx");
@@ -1134,19 +1263,15 @@
 
   async function processBudgetBuilder() {
     if (!window.BudgetBuilderOps || !window.BudgetMaster) throw new Error("โหลด Budget Builder module ไม่สำเร็จ กรุณารีเฟรชหน้าเว็บ");
-    const input = state.parsed[0];
-    if (!input || !input.workbook) throw new Error("กรุณาเลือกไฟล์ Excel ต้นทาง");
-    const sheetName = els.budgetSourceSheet.value || input.workbook.SheetNames[0];
-    const worksheet = input.workbook.Sheets[sheetName];
-    if (!worksheet) throw new Error("ไม่พบ Source Sheet ที่เลือก");
-    setStatus("กำลังอ่านรายการโครงการและ Mapping จังหวัด...", "working", 35);
-    const matrix = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: "", raw: true, blankrows: false });
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    const result = BudgetBuilderOps.buildWorkbook(XLSX, matrix, getBudgetBuilderOptions());
-    setStatus(`พบ ${formatNumber(result.report.total)} รายการ · กำลังสร้าง Workbook...`, "working", 78);
+    if (!state.budgetRecords.length) await prepareBudgetDraft();
+    const unselected = state.budgetRecords.filter((record) => !record.workType);
+    if (unselected.length) throw new Error(`ยังมี ${unselected.length} รายการที่ยังไม่ได้เลือกประเภทงาน กรุณาเลือกก่อน Export`);
+    setStatus("กำลังสร้าง Complete File แบบ Values Only...", "working", 55);
+    const options = getBudgetBuilderOptions();
+    const result = BudgetBuilderOps.buildWorkbookFromRecords(XLSX, state.budgetRecords, { ...options, rawMatrix: state.budgetMatrix });
     const outputName = ensureExtension(els.outputName.value, "xlsx");
-    XLSX.writeFile(result.workbook, outputName, { bookType: "xlsx", compression: true, cellFormula: true, cellStyles: true });
-    return `สร้าง ${outputName} เรียบร้อย · ${formatNumber(result.report.total)} รายการ · Mapping จังหวัด ${formatNumber(result.report.mappedProvince)} · ต้องตรวจ ${formatNumber(result.report.needsReview)}`;
+    XLSX.writeFile(result.workbook, outputName, { bookType: "xlsx", compression: true, cellStyles: true });
+    return `สร้าง ${outputName} เรียบร้อย · ${formatNumber(result.report.total)} รายการ · Values Only · ต้องตรวจ ${formatNumber(result.report.needsReview)}`;
   }
 
   async function processOptimizeExcel() {
@@ -1218,7 +1343,20 @@
   els.resetButton.addEventListener("click", resetFiles);
   els.processButton.addEventListener("click", processFiles);
   els.cancelButton.addEventListener("click", cancelOptimizeJob);
-  els.budgetAgency.addEventListener("change", populateBudgetWorkTypes);
+  els.budgetAgency.addEventListener("change", () => { populateBudgetWorkTypes(); clearBudgetPreview("เปลี่ยนหน่วยงานแล้ว กรุณาวิเคราะห์รายการใหม่"); });
+  els.budgetSourceSheet.addEventListener("change", () => clearBudgetPreview("เปลี่ยน Source Sheet แล้ว กรุณาวิเคราะห์รายการใหม่"));
+  [els.constructionPercent, els.maintenancePercent, els.defaultConstructionType, els.defaultMaintenanceType, els.projectRowsOnly, els.roadBudgetOnly]
+    .forEach((control) => control.addEventListener("change", () => clearBudgetPreview("เปลี่ยน Config แล้ว กรุณาวิเคราะห์รายการใหม่")));
+  els.budgetPrepareButton.addEventListener("click", () => prepareBudgetDraft().catch((error) => setStatus(error.message || "วิเคราะห์รายการไม่สำเร็จ", "error", 0)));
+  els.budgetSearch.addEventListener("input", () => { state.budgetPreviewPage = 1; renderBudgetPreview(); });
+  els.budgetCategoryFilter.addEventListener("change", () => { state.budgetPreviewPage = 1; renderBudgetPreview(); });
+  els.budgetApplyBulk.addEventListener("click", applyBudgetBulkType);
+  els.budgetPrevPage.addEventListener("click", () => { state.budgetPreviewPage -= 1; renderBudgetPreview(); });
+  els.budgetNextPage.addEventListener("click", () => { state.budgetPreviewPage += 1; renderBudgetPreview(); });
+  els.budgetPreviewBody.addEventListener("change", (event) => {
+    const select = event.target.closest(".budget-worktype-select");
+    if (select) updateBudgetRecordWorkType(Number(select.dataset.index), select.value);
+  });
   [
     els.optimizeMode,
     els.optimizeFormat,
