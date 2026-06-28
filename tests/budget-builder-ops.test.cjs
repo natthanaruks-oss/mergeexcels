@@ -28,14 +28,18 @@ assert.equal(rows[0].region, "S");
 assert.equal(rows[0].annualBudget, 27000000);
 assert.equal(rows[1].province, "ชัยภูมิ");
 assert.equal(rows[1].category, "Maintenance");
-assert.equal(rows[1].workType, "HMA Overlay-A");
+assert.equal(rows[1].suggestedFamily, "Recycling HMA");
+assert.equal(rows[1].workType, "Recycling HMA-A");
+assert.equal(rows[1].historicalBand, "Medium");
+assert.equal(rows[1].workTypeConfirmed, false);
+assert.match(rows[1].status, /ยังไม่ยืนยันประเภทงาน/);
 
 const built = Ops.buildWorkbook(XLSX, [["ถนนสาย ชม.5080 แยก ทช.ชม.3005 - ศูนย์พัฒนาโครงการหลวงตีนตก อ.แม่ออน จ.เชียงใหม่", 34000000]], {
   agency: "DOR", constructionPercent: 0.7, maintenancePercent: 0.8,
   defaultConstruction: "Constructions HMA (1 Layer)-A", defaultMaintenance: "HMA Overlay-A",
   projectRowsOnly: true, roadBudgetOnly: false,
 });
-assert.deepEqual(built.workbook.SheetNames, ["DOR", "Summary", "Validation", "Factor Master", "Region Mapping", "Raw Source"]);
+assert.deepEqual(built.workbook.SheetNames, ["DOR", "Summary", "Validation", "Factor Master", "Historical Rules", "WorkType Master", "Audit Log", "Region Mapping", "Raw Source"]);
 assert.equal(built.report.total, 1);
 assert.equal(built.records[0].province, "เชียงใหม่");
 assert.equal(built.workbook.Sheets["Factor Master"].A2.v, "Constructions HMA (2 layers)-A");
@@ -65,11 +69,13 @@ const defaultMaintenance = Ops.extractProjectsFromMatrix([
 assert.equal(defaultMaintenance.length, 1);
 assert.equal(defaultMaintenance[0].percent, 0.8);
 assert.equal(defaultMaintenance[0].annualBudget, 8000000);
+assert.equal(defaultMaintenance[0].suggestedFamily, "Recycling HMA");
+assert.equal(defaultMaintenance[0].historicalSupport, 3067);
 console.log("BudgetBuilder maintenance 80% default regression passed.");
 
 
 
-const manual = Ops.calculateRecord(rows[0], { agency: "DOH", workType: "Recycling HMA-A" });
+const manual = Ops.calculateRecord(rows[0], { agency: "DOH", workType: "Recycling HMA-A", confirmed: true, selectionSource: "Manual selection" });
 assert.equal(manual.workType, "Recycling HMA-A");
 assert.equal(manual.status, "Ready");
 assert.ok(manual.area > 0);
@@ -82,3 +88,13 @@ for (const sheetName of valuesOnly.workbook.SheetNames) {
   }
 }
 console.log("BudgetBuilder manual Work Type + Values Only regression passed.");
+
+const highRule = Ops.historicalSuggestion("DOH", "งานบำรุงพิเศษและบูรณะ", "ทล. 1 ตอน ตัวอย่าง", "Maintenance", { maintenance: "HMA Overlay-A" });
+assert.equal(highRule.family, "Recycling HMA");
+assert.equal(highRule.band, "High");
+assert.equal(highRule.support, 1301);
+assert.ok(highRule.suggestedWorkType.startsWith("Recycling HMA"));
+const audit = valuesOnly.workbook.Sheets["Audit Log"];
+assert.equal(audit.L2.v, "Yes");
+assert.equal(audit.N2.v, "Manual selection");
+console.log("BudgetBuilder historical rule + audit regression passed.");

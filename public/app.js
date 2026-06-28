@@ -184,6 +184,9 @@
     budgetPrepareButton: document.getElementById("budgetPrepareButton"),
     budgetSearch: document.getElementById("budgetSearch"),
     budgetCategoryFilter: document.getElementById("budgetCategoryFilter"),
+    budgetFamilyFilter: document.getElementById("budgetFamilyFilter"),
+    budgetConfidenceFilter: document.getElementById("budgetConfidenceFilter"),
+    budgetConfirmSuggested: document.getElementById("budgetConfirmSuggested"),
     budgetBulkType: document.getElementById("budgetBulkType"),
     budgetApplyBulk: document.getElementById("budgetApplyBulk"),
     budgetPreviewPanel: document.getElementById("budgetPreviewPanel"),
@@ -360,7 +363,7 @@
     if (policy.blocked) return Promise.reject(new Error(policy.message));
     terminateOptimizeWorker();
     const jobId = state.optimizeJobId;
-    const worker = new Worker(`./optimize-worker.js?v=3.4.2`);
+    const worker = new Worker(`./optimize-worker.js?v=3.5.0`);
     state.optimizeWorker = worker;
 
     return new Promise(async (resolve, reject) => {
@@ -531,49 +534,98 @@
     return (window.BudgetMaster && window.BudgetMaster.factors[agency] || []).map((item) => item.workType);
   }
 
+  function budgetFamilies() {
+    const set = new Set(budgetWorkTypes().map((name) => window.BudgetHistoryRules.familyOfWorkType(name)).filter(Boolean));
+    return [...set].sort((a, b) => a.localeCompare(b));
+  }
+
+  function groupedWorkTypeOptions(selected, suggestedFamily = "", includeBlank = true) {
+    const workTypes = budgetWorkTypes();
+    const groups = new Map();
+    workTypes.forEach((name) => {
+      const family = window.BudgetHistoryRules.familyOfWorkType(name) || "Other";
+      if (!groups.has(family)) groups.set(family, []);
+      groups.get(family).push(name);
+    });
+    const order = [...groups.keys()].sort((a, b) => {
+      if (a === suggestedFamily) return -1;
+      if (b === suggestedFamily) return 1;
+      return a.localeCompare(b);
+    });
+    const html = includeBlank ? ['<option value="">— กรุณาเลือกและยืนยันประเภทงาน —</option>'] : [];
+    order.forEach((family) => {
+      const label = family === suggestedFamily ? `${family} · Suggested` : family;
+      html.push(`<optgroup label="${escapeHtml(label)}">`);
+      groups.get(family).forEach((name) => html.push(`<option value="${escapeHtml(name)}" ${name === selected ? "selected" : ""}>${escapeHtml(name)}</option>`));
+      html.push('</optgroup>');
+    });
+    return html.join("");
+  }
+
+  function populateBudgetFamilyFilter() {
+    if (!els.budgetFamilyFilter) return;
+    const previous = els.budgetFamilyFilter.value || "ALL";
+    const families = budgetFamilies();
+    els.budgetFamilyFilter.innerHTML = `<option value="ALL">ทั้งหมด</option>${families.map((name) => `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`).join("")}`;
+    els.budgetFamilyFilter.value = families.includes(previous) ? previous : "ALL";
+  }
+
   function filteredBudgetRecords() {
     const search = String(els.budgetSearch && els.budgetSearch.value || "").trim().toLowerCase();
     const category = String(els.budgetCategoryFilter && els.budgetCategoryFilter.value || "ALL");
+    const family = String(els.budgetFamilyFilter && els.budgetFamilyFilter.value || "ALL");
+    const confidence = String(els.budgetConfidenceFilter && els.budgetConfidenceFilter.value || "ALL");
     return state.budgetRecords.map((record, index) => ({ record, index })).filter(({ record }) => {
       if (category !== "ALL" && record.category !== category) return false;
+      if (family !== "ALL" && record.suggestedFamily !== family) return false;
+      if (confidence !== "ALL" && record.historicalBand !== confidence) return false;
       if (!search) return true;
-      return `${record.description} ${record.province} ${record.workType}`.toLowerCase().includes(search);
+      return `${record.activity || ""} ${record.description} ${record.province} ${record.workType} ${record.suggestedFamily || ""}`.toLowerCase().includes(search);
     });
   }
 
   function renderBudgetPreview() {
     if (!els.budgetPreviewPanel) return;
-    const workTypes = budgetWorkTypes();
+    populateBudgetFamilyFilter();
     const filtered = filteredBudgetRecords();
     const pageSize = state.budgetPreviewPageSize;
     const pages = Math.max(1, Math.ceil(filtered.length / pageSize));
     state.budgetPreviewPage = Math.max(1, Math.min(state.budgetPreviewPage, pages));
     const start = (state.budgetPreviewPage - 1) * pageSize;
     const current = filtered.slice(start, start + pageSize);
-    const optionHtml = (selected) => [`<option value="">— กรุณาเลือกประเภทงาน —</option>`, ...workTypes.map((name) => `<option value="${escapeHtml(name)}" ${name === selected ? "selected" : ""}>${escapeHtml(name)}</option>`)].join("");
 
-    els.budgetPreviewBody.innerHTML = current.map(({ record, index }) => `
+    els.budgetPreviewBody.innerHTML = current.map(({ record, index }) => {
+      const pct = Number(record.historicalConfidence || 0) * 100;
+      const suggestion = record.suggestedFamily
+        ? `<strong>${escapeHtml(record.suggestedFamily)}</strong><small>${pct.toFixed(1)}% · n=${formatNumber(record.historicalSupport || 0)} · Variant ${escapeHtml(record.suggestedVariant || "-")}</small>`
+        : `<strong>Manual Review</strong><small>ไม่พบ Historical Rule</small>`;
+      const confirmed = record.workTypeConfirmed ? '<span class="confirmed-badge">Confirmed</span>' : '<span class="pending-badge">ยังไม่ยืนยัน</span>';
+      return `
       <tr class="${record.status === "Ready" ? "" : "needs-review"}">
         <td>${formatNumber(record.sequence)}</td>
         <td>${escapeHtml(record.category)}</td>
+        <td class="activity-cell">${escapeHtml(record.activity || "-")}</td>
         <td>${escapeHtml(record.description)}</td>
         <td>${escapeHtml(record.province || "-")}</td>
         <td>${formatNumber(record.budget)}</td>
-        <td><select class="budget-worktype-select" data-index="${index}">${optionHtml(record.workType)}</select></td>
+        <td><div class="historical-suggestion ${String(record.historicalBand || "Low").toLowerCase()}">${suggestion}</div></td>
+        <td><select class="budget-worktype-select" data-index="${index}">${groupedWorkTypeOptions(record.workType, record.suggestedFamily)}</select>${confirmed}</td>
         <td>${escapeHtml(record.status)}</td>
-      </tr>`).join("");
+      </tr>`;
+    }).join("");
 
     const ready = state.budgetRecords.filter((r) => r.status === "Ready").length;
-    const unselected = state.budgetRecords.filter((r) => !r.workType).length;
-    els.budgetPreviewSummary.textContent = `${formatNumber(state.budgetRecords.length)} โครงการ · พร้อม ${formatNumber(ready)} · ยังไม่เลือกประเภทงาน ${formatNumber(unselected)}`;
+    const unconfirmed = state.budgetRecords.filter((r) => !r.workTypeConfirmed).length;
+    const high = state.budgetRecords.filter((r) => r.historicalBand === "High").length;
+    els.budgetPreviewSummary.textContent = `${formatNumber(state.budgetRecords.length)} โครงการ · Historical High ${formatNumber(high)} · ยืนยันแล้ว ${formatNumber(ready)} · รอยืนยัน ${formatNumber(unconfirmed)}`;
     els.budgetPageInfo.textContent = `หน้า ${state.budgetPreviewPage} / ${pages} · แสดง ${formatNumber(filtered.length)} รายการ`;
     els.budgetPrevPage.disabled = state.budgetPreviewPage <= 1;
     els.budgetNextPage.disabled = state.budgetPreviewPage >= pages;
     els.budgetPreviewPanel.classList.remove("hidden");
 
     const currentBulk = els.budgetBulkType.value;
-    els.budgetBulkType.innerHTML = `<option value="">เลือกประเภทงาน</option>${workTypes.map((name) => `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`).join("")}`;
-    if (workTypes.includes(currentBulk)) els.budgetBulkType.value = currentBulk;
+    els.budgetBulkType.innerHTML = groupedWorkTypeOptions(currentBulk, "", true);
+    if (budgetWorkTypes().includes(currentBulk)) els.budgetBulkType.value = currentBulk;
     renderFiles();
   }
 
@@ -592,6 +644,7 @@
     state.budgetMatrix = matrix;
     state.budgetRecords = records;
     state.budgetPreviewPage = 1;
+    populateBudgetFamilyFilter();
     renderBudgetPreview();
     setStatus(`พบ ${formatNumber(records.length)} รายการ กรุณาตรวจและเลือกประเภทงานก่อน Export`, "success", 0);
   }
@@ -599,7 +652,7 @@
   function updateBudgetRecordWorkType(index, workType) {
     const record = state.budgetRecords[index];
     if (!record) return;
-    state.budgetRecords[index] = BudgetBuilderOps.calculateRecord(record, { agency: els.budgetAgency.value, workType });
+    state.budgetRecords[index] = BudgetBuilderOps.calculateRecord(record, { agency: els.budgetAgency.value, workType, confirmed: Boolean(workType), selectionSource: "Manual selection" });
     renderBudgetPreview();
   }
 
@@ -608,10 +661,24 @@
     if (!workType) return;
     const filtered = filteredBudgetRecords();
     filtered.forEach(({ index, record }) => {
-      state.budgetRecords[index] = BudgetBuilderOps.calculateRecord(record, { agency: els.budgetAgency.value, workType });
+      state.budgetRecords[index] = BudgetBuilderOps.calculateRecord(record, { agency: els.budgetAgency.value, workType, confirmed: true, selectionSource: "Bulk selection" });
     });
     renderBudgetPreview();
     setStatus(`กำหนดประเภทงานให้ ${formatNumber(filtered.length)} รายการแล้ว`, "success", 0);
+  }
+
+  function confirmHighConfidenceSuggestions() {
+    const filtered = filteredBudgetRecords().filter(({ record }) => record.historicalBand === "High" && record.suggestedWorkType);
+    filtered.forEach(({ index, record }) => {
+      state.budgetRecords[index] = BudgetBuilderOps.calculateRecord(record, {
+        agency: els.budgetAgency.value,
+        workType: record.suggestedWorkType,
+        confirmed: true,
+        selectionSource: "Confirmed historical suggestion",
+      });
+    });
+    renderBudgetPreview();
+    setStatus(`ยืนยัน Historical Suggestion ระดับ High จำนวน ${formatNumber(filtered.length)} รายการแล้ว`, "success", 0);
   }
 
   function updateMode(mode) {
@@ -1264,8 +1331,8 @@
   async function processBudgetBuilder() {
     if (!window.BudgetBuilderOps || !window.BudgetMaster) throw new Error("โหลด Budget Builder module ไม่สำเร็จ กรุณารีเฟรชหน้าเว็บ");
     if (!state.budgetRecords.length) await prepareBudgetDraft();
-    const unselected = state.budgetRecords.filter((record) => !record.workType);
-    if (unselected.length) throw new Error(`ยังมี ${unselected.length} รายการที่ยังไม่ได้เลือกประเภทงาน กรุณาเลือกก่อน Export`);
+    const unconfirmed = state.budgetRecords.filter((record) => !record.workType || !record.workTypeConfirmed);
+    if (unconfirmed.length) throw new Error(`ยังมี ${unconfirmed.length} รายการที่ยังไม่ได้ยืนยันประเภทงาน กรุณายืนยันก่อน Export`);
     setStatus("กำลังสร้าง Complete File แบบ Values Only...", "working", 55);
     const options = getBudgetBuilderOptions();
     const result = BudgetBuilderOps.buildWorkbookFromRecords(XLSX, state.budgetRecords, { ...options, rawMatrix: state.budgetMatrix });
@@ -1350,6 +1417,9 @@
   els.budgetPrepareButton.addEventListener("click", () => prepareBudgetDraft().catch((error) => setStatus(error.message || "วิเคราะห์รายการไม่สำเร็จ", "error", 0)));
   els.budgetSearch.addEventListener("input", () => { state.budgetPreviewPage = 1; renderBudgetPreview(); });
   els.budgetCategoryFilter.addEventListener("change", () => { state.budgetPreviewPage = 1; renderBudgetPreview(); });
+  els.budgetFamilyFilter.addEventListener("change", () => { state.budgetPreviewPage = 1; renderBudgetPreview(); });
+  els.budgetConfidenceFilter.addEventListener("change", () => { state.budgetPreviewPage = 1; renderBudgetPreview(); });
+  els.budgetConfirmSuggested.addEventListener("click", confirmHighConfidenceSuggestions);
   els.budgetApplyBulk.addEventListener("click", applyBudgetBulkType);
   els.budgetPrevPage.addEventListener("click", () => { state.budgetPreviewPage -= 1; renderBudgetPreview(); });
   els.budgetNextPage.addEventListener("click", () => { state.budgetPreviewPage += 1; renderBudgetPreview(); });

@@ -5,26 +5,27 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="รวม ต่อ และแยกไฟล์ Excel และ PDF บนเบราว์เซอร์โดยไม่อัปโหลดไฟล์ขึ้นเซิร์ฟเวอร์" />
     <title>MergeExcels — Excel & PDF File Toolkit</title>
-    <link rel="stylesheet" href="./styles.css?v=3.4.2" />
-    <script defer src="./vendor/xlsx.full.min.js?v=3.4.2"></script>
-    <script defer src="./vendor/jszip.min.js?v=3.4.2"></script>
-    <script defer src="./vendor/pdf-lib.min.js?v=3.4.2"></script>
-    <script defer src="./vendor/pdf.min.js?v=3.4.2"></script>
-    <script defer src="./excel-ops.js?v=3.4.2"></script>
-    <script defer src="./pdf-ops.js?v=3.4.2"></script>
-    <script defer src="./thai-roads-config.js?v=3.4.2"></script>
-    <script defer src="./text-correct.js?v=3.4.2"></script>
-    <script defer src="./pdftable-ops.js?v=3.4.2"></script>
-    <script defer src="./optimize-ops.js?v=3.4.2"></script>
-    <script defer src="./budget-master.js?v=3.4.2"></script>
-    <script defer src="./budget-builder-ops.js?v=3.4.2"></script>
-    <script defer src="./app.js?v=3.4.2"></script>
+    <link rel="stylesheet" href="./styles.css?v=3.5.0" />
+    <script defer src="./vendor/xlsx.full.min.js?v=3.5.0"></script>
+    <script defer src="./vendor/jszip.min.js?v=3.5.0"></script>
+    <script defer src="./vendor/pdf-lib.min.js?v=3.5.0"></script>
+    <script defer src="./vendor/pdf.min.js?v=3.5.0"></script>
+    <script defer src="./excel-ops.js?v=3.5.0"></script>
+    <script defer src="./pdf-ops.js?v=3.5.0"></script>
+    <script defer src="./thai-roads-config.js?v=3.5.0"></script>
+    <script defer src="./text-correct.js?v=3.5.0"></script>
+    <script defer src="./pdftable-ops.js?v=3.5.0"></script>
+    <script defer src="./optimize-ops.js?v=3.5.0"></script>
+    <script defer src="./budget-master.js?v=3.5.0"></script>
+    <script defer src="./budget-history-rules.js?v=3.5.0"></script>
+    <script defer src="./budget-builder-ops.js?v=3.5.0"></script>
+    <script defer src="./app.js?v=3.5.0"></script>
   </head>
   <body>
     <header class="site-header">
       <div class="brand-mark" aria-hidden="true">M</div>
       <div>
-        <div class="brand-title-row"><h1>MergeExcels</h1><span class="version-badge">v3.4.2</span></div>
+        <div class="brand-title-row"><h1>MergeExcels</h1><span class="version-badge">v3.5.0</span></div>
         <p>เครื่องมือรวม ต่อ และแยกไฟล์ Excel และ PDF โดยประมวลผลในเบราว์เซอร์</p>
       </div>
     </header>
@@ -245,8 +246,8 @@
             <label class="field-group"><span>Source Sheet</span><select id="budgetSourceSheet"><option value="">เลือกไฟล์ก่อน</option></select></label>
             <label class="field-group"><span>Construction Budget %</span><input id="constructionPercent" type="number" min="0" max="100" step="1" value="60" /></label>
             <label class="field-group"><span>Maintenance Budget %</span><input id="maintenancePercent" type="number" min="0" max="100" step="1" value="80" /></label>
-            <label class="field-group wide"><span>Default Construction Work Type</span><select id="defaultConstructionType"></select></label>
-            <label class="field-group wide"><span>Default Maintenance Work Type</span><select id="defaultMaintenanceType"></select></label>
+            <label class="field-group wide"><span>Fallback Construction Suggestion</span><select id="defaultConstructionType"></select><small>ใช้เป็นคำแนะนำเมื่อไม่พบ Historical Rule เท่านั้น</small></label>
+            <label class="field-group wide"><span>Fallback Maintenance Suggestion</span><select id="defaultMaintenanceType"></select><small>ยังต้องยืนยันก่อน Export</small></label>
           </div>
           <div class="option-check-grid">
             <label class="check-row compact"><input id="projectRowsOnly" type="checkbox" checked /><span><strong>Project Detail Only</strong><small>ตัด Summary/Header และใช้เฉพาะบรรทัดที่มีลักษณะเป็นโครงการ</small></span></label>
@@ -256,20 +257,23 @@
             <button id="budgetPrepareButton" class="secondary-button" type="button">วิเคราะห์รายการและเลือกประเภทงาน</button>
             <label class="field-group"><span>ค้นหารายการ</span><input id="budgetSearch" type="search" placeholder="ชื่อสายทาง / จังหวัด" /></label>
             <label class="field-group"><span>หมวดงบ</span><select id="budgetCategoryFilter"><option value="ALL">ทั้งหมด</option><option value="Construction">Construction</option><option value="Maintenance">Maintenance</option></select></label>
+            <label class="field-group"><span>Suggested Family</span><select id="budgetFamilyFilter"><option value="ALL">ทั้งหมด</option></select></label>
+            <label class="field-group"><span>Historical Confidence</span><select id="budgetConfidenceFilter"><option value="ALL">ทั้งหมด</option><option value="High">High ≥ 90%</option><option value="Medium">Medium 70–89%</option><option value="Low">Low / No rule</option></select></label>
+            <button id="budgetConfirmSuggested" class="secondary-button historical-button" type="button">ยืนยันคำแนะนำ High Confidence</button>
             <label class="field-group wide"><span>กำหนดประเภทงานแบบกลุ่ม</span><select id="budgetBulkType"><option value="">เลือกประเภทงาน</option></select></label>
             <button id="budgetApplyBulk" class="secondary-button" type="button">ใช้กับรายการที่กรอง</button>
           </div>
           <div id="budgetPreviewPanel" class="budget-preview hidden">
-            <div class="budget-preview-head"><strong id="budgetPreviewSummary">ยังไม่ได้วิเคราะห์รายการ</strong><span>เลือกประเภทงานได้ทีละโครงการก่อน Export · ผลลัพธ์เป็น Values Only ไม่มีสูตรผูก</span></div>
+            <div class="budget-preview-head"><strong id="budgetPreviewSummary">ยังไม่ได้วิเคราะห์รายการ</strong><span>Historical Rule ใช้ข้อมูลปี 2020–2026 เพื่อแนะนำ Family เท่านั้น · ผู้ใช้ต้องยืนยัน Work Type ก่อน Export</span></div>
             <div class="budget-table-wrap">
               <table class="budget-review-table">
-                <thead><tr><th>#</th><th>หมวด</th><th>รายละเอียดโครงการ</th><th>จังหวัด</th><th>งบประมาณ</th><th>ประเภทงาน</th><th>สถานะ</th></tr></thead>
+                <thead><tr><th>#</th><th>หมวด</th><th>Activity / Section</th><th>รายละเอียดโครงการ</th><th>จังหวัด</th><th>งบประมาณ</th><th>Historical Suggestion</th><th>Work Type ที่เลือก</th><th>สถานะ</th></tr></thead>
                 <tbody id="budgetPreviewBody"></tbody>
               </table>
             </div>
             <div class="budget-pagination"><button id="budgetPrevPage" type="button">‹ ก่อนหน้า</button><span id="budgetPageInfo">หน้า 1 / 1</span><button id="budgetNextPage" type="button">ถัดไป ›</button></div>
           </div>
-          <div class="builder-info"><strong>ผลลัพธ์รูปแบบเดียวกับ Complete File ต้นกำเนิด</strong><span>แยก Construction / Maintenance · Work Type เลือกในหน้าจอ · Values Only · ไม่มีสูตร External Link</span></div>
+          <div class="builder-info"><strong>Historical Smart Suggestion v1</strong><span>อ้างอิง 18,621 รายการ ปี 2020–2026 · แนะนำ Work Type Family พร้อม Confidence/Support · เก็บ Audit Log และ Manual Override</span></div>
         </section>
 
         <section id="analysisPanel" class="analysis-panel hidden" aria-labelledby="analysisTitle">
@@ -375,6 +379,6 @@
       </section>
     </main>
 
-    <footer>MergeExcels v3.4.2 — Excel & PDF Toolkit</footer>
+    <footer>MergeExcels v3.5.0 — Excel & PDF Toolkit</footer>
   </body>
 </html>

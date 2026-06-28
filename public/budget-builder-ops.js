@@ -1,12 +1,13 @@
 (function (root, factory) {
   if (typeof module === "object" && module.exports) {
-    module.exports = factory(require("./budget-master.js"), require("./text-correct.js"));
+    module.exports = factory(require("./budget-master.js"), require("./text-correct.js"), require("./budget-history-rules.js"));
   } else {
-    root.BudgetBuilderOps = factory(root.BudgetMaster, root.TextCorrect);
+    root.BudgetBuilderOps = factory(root.BudgetMaster, root.TextCorrect, root.BudgetHistoryRules);
   }
-})(typeof self !== "undefined" ? self : this, function (BudgetMaster, TextCorrect) {
+})(typeof self !== "undefined" ? self : this, function (BudgetMaster, TextCorrect, BudgetHistoryRules) {
   "use strict";
   if (!BudgetMaster) throw new Error("BudgetMaster is required.");
+  if (!BudgetHistoryRules) throw new Error("BudgetHistoryRules is required.");
 
   const PRODUCT_KEYS = ["AC60-70", "AC40-50", "PMA", "EAP_CSS1", "MC-70", "CRS-2", "CSS-1h", "CSS-1h (EMA)"];
   const PROVINCE_ALIASES = {
@@ -89,6 +90,41 @@
     return map.has(fallback) ? fallback : "";
   }
 
+  function chooseSuggestedWorkType(agency, family, variant, text, defaults = {}) {
+    if (!family) return "";
+    const workTypes = Array.from(factorMap(agency).keys());
+    let candidates = BudgetHistoryRules.workTypesForFamily(workTypes, family);
+    if (!candidates.length) return "";
+    const value = cleanText(text, { roadPack: true }).toLowerCase();
+    const preferredVariant = String(variant || "").toUpperCase();
+    const byVariant = preferredVariant ? candidates.filter((name) => BudgetHistoryRules.variantOfWorkType(name) === preferredVariant) : [];
+    if (byVariant.length) candidates = byVariant;
+
+    const layerMatch = value.match(/(?:^|\s)([123])\s*(?:ชั้น|layer)/i);
+    if (layerMatch) {
+      const layerCandidates = candidates.filter((name) => new RegExp(`\\(${layerMatch[1]}\\s*layers?\\)`, "i").test(name));
+      if (layerCandidates.length) candidates = layerCandidates;
+    } else if (family === "Recycling HMA") {
+      const oneLayer = candidates.filter((name) => !/\(2\s*layers?\)/i.test(name));
+      if (oneLayer.length) candidates = oneLayer;
+    }
+
+    const fallback = family === "Construction HMA" ? defaults.construction
+      : (family === "HMA Overlay" || family === "Recycling HMA" ? defaults.maintenance : "");
+    if (fallback && candidates.includes(fallback)) return fallback;
+    return candidates[0] || "";
+  }
+
+  function historicalSuggestion(agency, activity, description, category, defaults = {}) {
+    const suggestion = BudgetHistoryRules.suggest(agency, activity, description);
+    let suggestedWorkType = chooseSuggestedWorkType(agency, suggestion.family, suggestion.variant, `${activity || ""} ${description || ""}`, defaults);
+    if (!suggestedWorkType) {
+      const legacy = suggestWorkType(description, agency, category, defaults);
+      suggestedWorkType = legacy || "";
+    }
+    return { ...suggestion, suggestedWorkType };
+  }
+
   function suggestWorkType(text, agency, category, defaults = {}) {
     const value = cleanText(text, { roadPack: true }).toLowerCase();
     if (/คอนกรีต|jpcp|jrcp|คสล\.|ผิวทางคอนกรีต/.test(value)) {
@@ -153,6 +189,7 @@
     const records = [];
     let pending = [];
     let currentCategory = "Other";
+    let currentActivity = "";
     const rows = Array.isArray(matrix) ? matrix : [];
 
     rows.forEach((rawRow, rowIndex) => {
@@ -163,9 +200,18 @@
 
       const amountInfo = findAmount(row, minimumAmount);
       if (!amountInfo) {
+        const historicalHeading = BudgetHistoryRules.matchActivityRule(agency, joined);
+        if (historicalHeading) {
+          currentActivity = historicalHeading.activity;
+          const headingCategory = classifyCategory(joined);
+          if (headingCategory !== "Other") currentCategory = headingCategory;
+          pending = [];
+          return;
+        }
         const headingCategory = classifyCategory(joined);
         if (headingCategory !== "Other") currentCategory = headingCategory;
         if (NOISE_LINE.test(joined) || SUMMARY_LINE.test(joined) || BUDGET_HEADING.test(joined) || NARRATIVE_OR_AGGREGATE.test(joined)) {
+          if (/กิจกรรม|งานบำรุง|โครงการยกระดับ|ก่อสร้าง|บูรณะ|ปรับปรุง/i.test(joined) && joined.length <= 180) currentActivity = joined;
           pending = [];
           return;
         }
@@ -190,7 +236,8 @@
       const category = directCategory === "Other" ? currentCategory : directCategory;
       if (options.roadBudgetOnly !== false && (category === "Other" || NON_MATERIAL_PROJECT.test(description))) return;
       const regionInfo = getRegion(province);
-      const workType = suggestWorkType(description, agency, category, defaults);
+      const history = historicalSuggestion(agency, currentActivity, description, category, defaults);
+      const workType = history.suggestedWorkType || "";
       const factor = factorMap(agency).get(workType) || null;
       const percent = Number.isFinite(percentages[category]) ? percentages[category] : 0;
       const annualBudget = amountInfo.amount * percent;
@@ -200,17 +247,22 @@
 
       const issues = [];
       if (!province) issues.push("ไม่พบจังหวัด");
-      if (!workType || !factor) issues.push("ตรวจประเภทงาน");
+      if (!workType || !factor) issues.push("ไม่พบคำแนะนำประเภทงาน");
+      else issues.push("ยังไม่ยืนยันประเภทงาน");
+      if (history.band === "Low") issues.push("Historical confidence ต่ำ");
       if (category === "Other") issues.push("ตรวจหมวดงบ");
       if (!amountInfo.amount) issues.push("ไม่พบงบประมาณ");
 
       records.push({
         agency, sequence: records.length + 1, description, province,
         region: regionInfo ? regionInfo.region : "", salesCode: regionInfo ? regionInfo.salesCode : "",
-        category, progress: "", percent, budget: amountInfo.amount, annualBudget,
-        workType, cost: factor ? factor.cost : 0, area, products,
-        status: issues.length ? issues.join("; ") : "Ready",
-        confidence: issues.length === 0 ? "High" : (province && amountInfo.amount ? "Medium" : "Low"),
+        category, activity: currentActivity, progress: "", percent, budget: amountInfo.amount, annualBudget,
+        workType, workTypeConfirmed: false, selectionSource: "Historical suggestion", cost: factor ? factor.cost : 0, area, products,
+        suggestedFamily: history.family, suggestedVariant: history.variant, suggestedWorkType: history.suggestedWorkType,
+        historicalConfidence: history.confidence, historicalSupport: history.support, historicalBand: history.band,
+        historicalRule: history.rule, historicalBasis: history.basis, historicalAction: history.action,
+        status: issues.join("; "),
+        confidence: history.band,
         sourceRow: rowIndex + 1,
       });
     });
@@ -221,6 +273,8 @@
     const agency = String(options.agency || record.agency || "DOH").toUpperCase() === "DOR" ? "DOR" : "DOH";
     const copy = { ...record, agency, products: { ...(record.products || {}) } };
     if (options.workType != null) copy.workType = String(options.workType || "").trim();
+    if (options.confirmed != null) copy.workTypeConfirmed = Boolean(options.confirmed);
+    if (options.selectionSource != null) copy.selectionSource = String(options.selectionSource || "");
     if (options.percent != null && Number.isFinite(Number(options.percent))) copy.percent = Number(options.percent);
     const factor = factorMap(agency).get(String(copy.workType || "").trim()) || null;
     copy.annualBudget = Number(copy.budget || 0) * Number(copy.percent || 0);
@@ -232,7 +286,10 @@
     const issues = [];
     if (!copy.province) issues.push("ไม่พบจังหวัด");
     if (!copy.workType || !factor) issues.push("กรุณาเลือกประเภทงาน");
+    else if (!copy.workTypeConfirmed) issues.push("ยังไม่ยืนยันประเภทงาน");
     if (!copy.budget) issues.push("ไม่พบงบประมาณ");
+    copy.selectedFamily = copy.workType ? BudgetHistoryRules.familyOfWorkType(copy.workType) : "";
+    copy.manualOverride = Boolean(copy.workTypeConfirmed && copy.suggestedFamily && copy.selectedFamily && copy.selectedFamily !== copy.suggestedFamily);
     copy.status = issues.length ? issues.join("; ") : "Ready";
     copy.confidence = issues.length === 0 ? "Confirmed" : (copy.province && copy.budget ? "Review" : "Low");
     return copy;
@@ -279,7 +336,11 @@
     return [
       [`${agency} Budget Builder Summary`, ""], ["Projects", records.length],
       ["Total Budget", records.reduce((s, r) => s + r.budget, 0)], ["Annual Budget", records.reduce((s, r) => s + r.annualBudget, 0)],
-      ["Ready", records.filter((r) => r.status === "Ready").length], ["Needs Review", records.filter((r) => r.status !== "Ready").length], [],
+      ["Ready", records.filter((r) => r.status === "Ready").length], ["Needs Review", records.filter((r) => r.status !== "Ready").length],
+      ["Historical High", records.filter((r) => r.historicalBand === "High").length],
+      ["Historical Medium", records.filter((r) => r.historicalBand === "Medium").length],
+      ["Historical Low / No rule", records.filter((r) => r.historicalBand === "Low").length],
+      ["Manual Override", records.filter((r) => r.manualOverride).length], [],
       ["By Category", "Projects", "Budget", "Annual Budget"], ...byCategory, [],
       ["By Region", "Projects", "Budget", "Annual Budget"], ...byRegion, [],
       ["Product", "Estimated Volume (Tons)"], ...productTotals,
@@ -398,11 +459,11 @@
     addSheetFormatting(summarySheet, [30, 18, 18, 18], null, 1);
     XLSX.utils.book_append_sheet(workbook, summarySheet, "Summary");
 
-    const validationRows = [["ลำดับ", "รายละเอียดงบประมาณ", "จังหวัด", "งบประมาณ", "ประเภทงาน", "Validation Status", "Source Row"]];
-    records.filter((r) => r.status !== "Ready").forEach((r) => validationRows.push([r.sequence, r.description, r.province, r.budget, r.workType, r.status, r.sourceRow]));
-    if (validationRows.length === 1) validationRows.push(["", "ไม่พบรายการที่ต้องตรวจสอบ", "", "", "", "Ready", ""]);
+    const validationRows = [["ลำดับ", "Activity / Section", "รายละเอียดงบประมาณ", "จังหวัด", "งบประมาณ", "Suggested Family", "Historical Confidence", "Support", "Selected Work Type", "Validation Status", "Source Row"]];
+    records.filter((r) => r.status !== "Ready").forEach((r) => validationRows.push([r.sequence, r.activity, r.description, r.province, r.budget, r.suggestedFamily, r.historicalConfidence, r.historicalSupport, r.workType, r.status, r.sourceRow]));
+    if (validationRows.length === 1) validationRows.push(["", "", "ไม่พบรายการที่ต้องตรวจสอบ", "", "", "", "", "", "", "Ready", ""]);
     const validationSheet = XLSX.utils.aoa_to_sheet(validationRows);
-    addSheetFormatting(validationSheet, [9, 75, 20, 17, 40, 32, 12], `A1:G${validationRows.length}`, 1);
+    addSheetFormatting(validationSheet, [9, 45, 75, 20, 17, 22, 18, 12, 40, 32, 12], `A1:K${validationRows.length}`, 1);
     XLSX.utils.book_append_sheet(workbook, validationSheet, "Validation");
 
     const factorRows = BudgetMaster.factors[agency] || [];
@@ -411,6 +472,24 @@
     const factorSheet = XLSX.utils.aoa_to_sheet(factorData);
     addSheetFormatting(factorSheet, [42, 14, 12, 12, 12, 14, 12, 12, 12, 14], `A1:J${factorData.length}`, 1);
     XLSX.utils.book_append_sheet(workbook, factorSheet, "Factor Master");
+
+    const historyRuleRows = [["Agency", "Activity / Section", "Support", "Dominant Family", "Family Confidence", "2nd Family", "2nd Count", "Top Variant", "Variant Confidence", "Recommended Action"],
+      ...BudgetHistoryRules.activityRules.filter((r) => r.agency === agency).map((r) => [r.agency, r.activity, r.support, r.family, r.familyConfidence, r.secondFamily, r.secondCount, r.topVariant, r.variantConfidence, r.action])];
+    const historyRuleSheet = XLSX.utils.aoa_to_sheet(historyRuleRows);
+    addSheetFormatting(historyRuleSheet, [10, 55, 12, 22, 18, 22, 12, 12, 18, 28], `A1:J${historyRuleRows.length}`, 1);
+    XLSX.utils.book_append_sheet(workbook, historyRuleSheet, "Historical Rules");
+
+    const canonicalRows = [["Raw Work Type", "Canonical Family", "Variant", "Records", "Years", "Agencies", "Factor Patterns", "Top Factor Share", "Recommendation"],
+      ...BudgetHistoryRules.workTypeHistory.map((r) => [r.rawWorkType, r.family, r.variant, r.records, r.years, r.agencies, r.factorPatterns, r.topFactorShare, r.recommendation])];
+    const canonicalSheet = XLSX.utils.aoa_to_sheet(canonicalRows);
+    addSheetFormatting(canonicalSheet, [42, 22, 10, 12, 24, 14, 16, 18, 38], `A1:I${canonicalRows.length}`, 1);
+    XLSX.utils.book_append_sheet(workbook, canonicalSheet, "WorkType Master");
+
+    const auditRows = [["ลำดับ", "Source Row", "Activity / Section", "Historical Rule", "Suggested Family", "Confidence", "Support", "Suggested Variant", "Suggested Work Type", "Selected Work Type", "Selected Family", "Confirmed", "Override", "Selection Source"],
+      ...records.map((r) => [r.sequence, r.sourceRow, r.activity, r.historicalRule, r.suggestedFamily, r.historicalConfidence, r.historicalSupport, r.suggestedVariant, r.suggestedWorkType, r.workType, r.selectedFamily, r.workTypeConfirmed ? "Yes" : "No", r.manualOverride ? "Yes" : "No", r.selectionSource])];
+    const auditSheet = XLSX.utils.aoa_to_sheet(auditRows);
+    addSheetFormatting(auditSheet, [9, 12, 45, 45, 22, 15, 12, 14, 40, 40, 22, 12, 12, 20], `A1:N${auditRows.length}`, 1);
+    XLSX.utils.book_append_sheet(workbook, auditSheet, "Audit Log");
 
     const regionRows = [["Province", "Province English", "Sales Code", "Region"], ...BudgetMaster.regions.map((r) => [r.province, r.english, r.salesCode, r.region])];
     const regionSheet = XLSX.utils.aoa_to_sheet(regionRows);
@@ -428,6 +507,9 @@
       needsReview: records.filter((r) => r.status !== "Ready").length,
       mappedProvince: records.filter((r) => r.province).length,
       totalBudget: records.reduce((s, r) => s + r.budget, 0), annualBudget: records.reduce((s, r) => s + r.annualBudget, 0),
+      historicalHigh: records.filter((r) => r.historicalBand === "High").length,
+      historicalMedium: records.filter((r) => r.historicalBand === "Medium").length,
+      manualOverrides: records.filter((r) => r.manualOverride).length,
     } };
   }
 
@@ -436,5 +518,5 @@
     return buildWorkbookFromRecords(XLSX, records, { ...options, rawMatrix: matrix });
   }
 
-  return { PRODUCT_KEYS, cleanText, parseAmount, detectProvince, classifyCategory, suggestWorkType, extractProjectsFromMatrix, calculateRecord, recalculateRecords, buildWorkbookFromRecords, buildWorkbook };
+  return { PRODUCT_KEYS, cleanText, parseAmount, detectProvince, classifyCategory, suggestWorkType, historicalSuggestion, extractProjectsFromMatrix, calculateRecord, recalculateRecords, buildWorkbookFromRecords, buildWorkbook };
 });

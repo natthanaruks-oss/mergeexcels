@@ -1,4 +1,4 @@
-# MergeExcels v3.4.2 — Excel, PDF & Budget Intelligence Toolkit
+# MergeExcels v3.5.0 — Excel, PDF & Budget Intelligence Toolkit
 
 Web Application สำหรับจัดการไฟล์ Excel และ PDF แบบ **Client-side 100%**
 ไฟล์ของผู้ใช้ถูกประมวลผลในเบราว์เซอร์และไม่ถูกอัปโหลดขึ้น Application Server
@@ -47,11 +47,16 @@ Web Application สำหรับจัดการไฟล์ Excel และ
 - กำหนด % งบประมาณปีใช้สำหรับ Construction และ Maintenance
 - คำนวณพื้นที่และปริมาณ AC60-70, AC40-50, PMA, EAP/CSS-1, MC-70, CRS-2, CSS-1h และ EMA
 - กรอง Narrative, Budget Summary, Land Compensation, Expropriation, Design และ Supervision ที่ไม่สร้าง Material Demand โดยตรง
-- สร้าง 6 Sheets: `DOH/DOR`, `Summary`, `Validation`, `Factor Master`, `Region Mapping`, `Raw Source`
+- Historical Smart Suggestion จากข้อมูลปี 2020–2026 จำนวน 18,621 รายการ โดยใช้ Agency + Activity / Section
+- แสดง Suggested Family, Historical Confidence, Support และ Top Variant เพื่อประกอบการตัดสินใจ
+- ผู้ใช้ต้องยืนยัน Work Type ทุกโครงการก่อน Export; ระบบไม่ Finalize Variant A/B/C/D/E แทนผู้ใช้
+- Filter ตาม Suggested Family / Confidence และยืนยัน High-Confidence Suggestion แบบกลุ่มได้โดยผู้ใช้เป็นผู้กด
+- สร้าง 9 Sheets: `DOH/DOR`, `Summary`, `Validation`, `Factor Master`, `Historical Rules`, `WorkType Master`, `Audit Log`, `Region Mapping`, `Raw Source`
+- Audit Log เก็บ Suggested Family, Selected Work Type, Selection Source และ Manual Override
 - คำนวณ Factor ใน Browser แล้วเขียนผลลัพธ์เป็น Values Only ไม่มีสูตร VLOOKUP หรือ External Link
 - จัด Main Sheet แยก Construction / Maintenance และเรียงคอลัมน์ตาม Complete File ต้นกำเนิด
 
-> Work Type เริ่มต้นเป็นข้อเสนอเบื้องต้น ผู้ใช้สามารถแก้ทีละรายการหรือกำหนดแบบกลุ่มในหน้าจอ ก่อน Export เป็นค่าคงที่
+> Historical Rule ช่วยแนะนำ Work Type Family เท่านั้น Exact Work Type และ Product Variant ต้องได้รับการยืนยันก่อน Export
 
 ## โครงสร้างสำคัญ
 
@@ -67,8 +72,9 @@ mergeexcels/
 │   ├── thai-roads-config.js
 │   ├── optimize-ops.js      # Core logic สำหรับวิเคราะห์/ลดขนาด/แบ่งไฟล์
 │   ├── optimize-worker.js   # Web Worker ป้องกันหน้าเว็บค้าง
-│   ├── budget-master.js     # Region และ Factor Master ที่ฝังในระบบ
-│   ├── budget-builder-ops.js# Logic เมนู 09 และ Validation
+│   ├── budget-master.js       # Region และ Factor Master ที่ฝังในระบบ
+│   ├── budget-history-rules.js# Historical Rule Engine 2020–2026 (aggregated only)
+│   ├── budget-builder-ops.js  # Logic เมนู 09, Validation และ Audit Log
 │   ├── styles.css
 │   ├── _headers             # CSP และ Security Headers
 │   └── vendor/              # Libraries ที่โหลดจากโดเมนเดียวกัน
@@ -119,7 +125,7 @@ Cloudflare Build Settings:
 3. ลาก **ทุกไฟล์และโฟลเดอร์ที่อยู่ข้างใน** ขึ้น Repo เดิม
 4. ต้องเห็น `public/`, `package.json`, `package-lock.json`, `wrangler.jsonc` และ `.node-version` ที่หน้า Root
 5. Commit แล้วรอ Cloudflare Deploy อัตโนมัติ
-6. เปิดเว็บและตรวจ Version Badge ต้องเป็น `v3.4.2`
+6. เปิดเว็บและตรวจ Version Badge ต้องเป็น `v3.5.0`
 
 ## Security Notes
 
