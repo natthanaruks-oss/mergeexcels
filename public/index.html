@@ -5,27 +5,27 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="รวม ต่อ และแยกไฟล์ Excel และ PDF บนเบราว์เซอร์โดยไม่อัปโหลดไฟล์ขึ้นเซิร์ฟเวอร์" />
     <title>MergeExcels — Excel & PDF File Toolkit</title>
-    <link rel="stylesheet" href="./styles.css?v=3.5.3" />
-    <script defer src="./vendor/xlsx.full.min.js?v=3.5.3"></script>
-    <script defer src="./vendor/jszip.min.js?v=3.5.3"></script>
-    <script defer src="./vendor/pdf-lib.min.js?v=3.5.3"></script>
-    <script defer src="./vendor/pdf.min.js?v=3.5.3"></script>
-    <script defer src="./excel-ops.js?v=3.5.3"></script>
-    <script defer src="./pdf-ops.js?v=3.5.3"></script>
-    <script defer src="./thai-roads-config.js?v=3.5.3"></script>
-    <script defer src="./text-correct.js?v=3.5.3"></script>
-    <script defer src="./pdftable-ops.js?v=3.5.3"></script>
-    <script defer src="./optimize-ops.js?v=3.5.3"></script>
-    <script defer src="./budget-master.js?v=3.5.3"></script>
-    <script defer src="./budget-history-rules.js?v=3.5.3"></script>
-    <script defer src="./budget-builder-ops.js?v=3.5.3"></script>
-    <script defer src="./app.js?v=3.5.3"></script>
+    <link rel="stylesheet" href="./styles.css?v=3.6.0" />
+    <script defer src="./vendor/xlsx.full.min.js?v=3.6.0"></script>
+    <script defer src="./vendor/jszip.min.js?v=3.6.0"></script>
+    <script defer src="./vendor/pdf-lib.min.js?v=3.6.0"></script>
+    <script defer src="./vendor/pdf.min.js?v=3.6.0"></script>
+    <script defer src="./excel-ops.js?v=3.6.0"></script>
+    <script defer src="./pdf-ops.js?v=3.6.0"></script>
+    <script defer src="./thai-roads-config.js?v=3.6.0"></script>
+    <script defer src="./text-correct.js?v=3.6.0"></script>
+    <script defer src="./pdftable-ops.js?v=3.6.0"></script>
+    <script defer src="./optimize-ops.js?v=3.6.0"></script>
+    <script defer src="./budget-master.js?v=3.6.0"></script>
+    <script defer src="./budget-history-rules.js?v=3.6.0"></script>
+    <script defer src="./budget-builder-ops.js?v=3.6.0"></script>
+    <script defer src="./app.js?v=3.6.0"></script>
   </head>
   <body>
     <header class="site-header">
       <div class="brand-mark" aria-hidden="true">M</div>
       <div>
-        <div class="brand-title-row"><h1>MergeExcels</h1><span class="version-badge">v3.5.3</span></div>
+        <div class="brand-title-row"><h1>MergeExcels</h1><span class="version-badge">v3.6.0</span></div>
         <p>เครื่องมือรวม ต่อ และแยกไฟล์ Excel และ PDF โดยประมวลผลในเบราว์เซอร์</p>
       </div>
     </header>
@@ -94,6 +94,13 @@
           <strong>DOH/DOR Budget Builder</strong>
           <span>แปลง Clean Raw Data เป็นไฟล์วิเคราะห์งบและประมาณการปริมาณผลิตภัณฑ์</span>
           <small>Province · Region · Work Type · Factor · Validation</small>
+        </button>
+        <button class="mode-card oracle-ar-card" type="button" data-mode="oracleArCleaner" aria-pressed="false">
+          <span class="mode-number">10</span>
+          <span class="mode-type">ORACLE · AR</span>
+          <strong>AR Statement Cleaner</strong>
+          <span>แปลง Oracle BI Publisher .xls เป็นข้อมูล AR รายลูกค้า</span>
+          <small>Customer Index · Summary · Transactions · 1 Sheet/Customer</small>
         </button>
       </section>
 
@@ -300,6 +307,30 @@
           <div class="builder-info"><strong>Historical Smart Suggestion v1</strong><span>อ้างอิง 18,621 รายการ ปี 2020–2026 · ระบบแนะนำ Work Type รายโครงการ · High ใช้ได้ทันที · Medium/Low อยู่ใน Validation · เก็บ Audit Log และ Manual Override</span></div>
         </section>
 
+        <section id="oracleArOptions" class="options-panel oracle-ar-panel hidden" aria-labelledby="oracleArTitle">
+          <div class="panel-heading">
+            <div>
+              <h3 id="oracleArTitle">Oracle AR Statement Cleaner</h3>
+              <small>สำหรับไฟล์ Statement of Account ที่ Oracle BI Publisher Export เป็น HTML แต่ใช้นามสกุล .xls</small>
+            </div>
+            <span class="local-badge">100% LOCAL</span>
+          </div>
+          <div class="option-check-grid oracle-ar-checks">
+            <label class="check-row compact"><input id="oracleCreateCustomerSheets" type="checkbox" checked /><span><strong>สร้าง 1 Sheet ต่อลูกค้า</strong><small>รวม THB และ USD ของลูกค้ารายเดียวไว้ใน Sheet เดียว โดยแยกเป็น Section</small></span></label>
+            <label class="check-row compact"><input id="oracleIncludeTransactions" type="checkbox" checked /><span><strong>สร้าง All Transactions</strong><small>รวมรายการทุกลูกค้าไว้สำหรับ Pivot, Power BI, DSO และ Reconciliation</small></span></label>
+            <label class="check-row compact"><input id="oracleIncludeOpeningClosing" type="checkbox" checked /><span><strong>เก็บ Opening/Closing Balance Rows</strong><small>ช่วยตรวจย้อนกลับกับ Statement ต้นฉบับ</small></span></label>
+            <label class="check-row compact"><input id="oracleIncludeExceptions" type="checkbox" checked /><span><strong>สร้าง Exceptions Sheet</strong><small>แยกรายการที่ยอดไม่สัมพันธ์หรือข้อมูลสำคัญไม่ครบ</small></span></label>
+          </div>
+          <div class="oracle-ar-note">ระบบจะตัดแบบฟอร์ม Bill Payment, Barcode และส่วนประกอบซ้ำออกโดยอัตโนมัติ โดยไม่แก้ไขไฟล์ต้นฉบับ</div>
+          <section id="oracleArAnalysis" class="oracle-ar-analysis hidden" aria-labelledby="oracleArAnalysisTitle">
+            <div class="analysis-head">
+              <div><p class="eyebrow">ORACLE AR ANALYSIS</p><h3 id="oracleArAnalysisTitle">ผลวิเคราะห์ข้อมูลรายลูกค้า</h3></div>
+              <span id="oracleArEntity" class="risk-badge pass">READY</span>
+            </div>
+            <div id="oracleArMetrics" class="metric-grid"></div>
+          </section>
+        </section>
+
         <section id="analysisPanel" class="analysis-panel hidden" aria-labelledby="analysisTitle">
           <div class="analysis-head">
             <div>
@@ -397,12 +428,17 @@
             <strong>DOH/DOR Budget Builder</strong>
             <p>แยกโครงการและงบประมาณ Mapping จังหวัด/Region พร้อมคำนวณพื้นที่และปริมาณผลิตภัณฑ์จาก Factor Master</p>
           </article>
+          <article>
+            <span class="note-type oracle-ar">ORACLE · AR</span>
+            <strong>AR Statement Cleaner</strong>
+            <p>รวม Oracle Statement ที่กระจายเป็นหลายร้อยตารางให้เป็น Customer Index, Summary, All Transactions และ Sheet รายลูกค้า</p>
+          </article>
         </div>
         <p class="privacy-note">ไฟล์ถูกประมวลผลบนเครื่องของคุณ ไม่ได้อัปโหลดไปยังเซิร์ฟเวอร์</p>
         <p class="limitation-note">Excel: Chart, รูปภาพ, Macro และฟีเจอร์ขั้นสูงบางอย่างอาจไม่ถูกเก็บไว้ · PDF: ไม่รองรับไฟล์ที่เข้ารหัสหรือมีรหัสผ่าน และลายเซ็นดิจิทัลอาจใช้ไม่ได้หลังแก้ไข</p>
       </section>
     </main>
 
-    <footer>MergeExcels v3.5.3 — Excel & PDF Toolkit</footer>
+    <footer>MergeExcels v3.6.0 — Excel & PDF Toolkit</footer>
   </body>
 </html>

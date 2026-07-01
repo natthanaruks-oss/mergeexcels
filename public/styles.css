@@ -777,3 +777,33 @@ footer { padding: 24px; color: var(--muted); text-align: center; font-size: 12px
     width: fit-content;
   }
 }
+
+/* ===== Menu 10: Oracle AR Statement Cleaner ===== */
+.oracle-ar-card .mode-type, .note-type.oracle-ar { background: #e7f4ed; color: #14563a; }
+.oracle-ar-card.active { border-color: #2b7a5b; background: #f0faf5; box-shadow: 0 9px 30px rgba(43, 122, 91, 0.14); }
+.oracle-ar-panel { overflow: hidden; }
+.oracle-ar-checks { margin-top: 14px; }
+.oracle-ar-note {
+  margin-top: 14px;
+  padding: 12px 14px;
+  border: 1px solid #cfe6da;
+  border-radius: 11px;
+  background: #f0faf5;
+  color: #275d47;
+  font-size: 12px;
+  line-height: 1.55;
+}
+.oracle-ar-analysis {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+}
+.oracle-ar-analysis .metric-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+
+@media (max-width: 900px) {
+  .oracle-ar-analysis .metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 560px) {
+  .oracle-ar-analysis .metric-grid { grid-template-columns: 1fr; }
+}

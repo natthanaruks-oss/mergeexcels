@@ -25,13 +25,17 @@ const requiredFiles = [
   "public/budget-history-rules.js",
   "public/budget-builder-ops.js",
   "tests/budget-builder-ops.test.cjs",
+  "public/oracle-ar-ops.js",
+  "public/oracle-ar-worker.js",
+  "tests/oracle-ar-ops.test.cjs",
+  "tests/oracle-ar-worker.test.cjs",
 ];
 
 for (const relativePath of requiredFiles) {
   await access(resolve(root, relativePath));
 }
 
-const [nodeVersion, packageJsonRaw, packageLock, wrangler, headers, app, optimizeWorker, indexHtml, budgetBuilder, budgetMaster, budgetHistory] = await Promise.all([
+const [nodeVersion, packageJsonRaw, packageLock, wrangler, headers, app, optimizeWorker, indexHtml, budgetBuilder, budgetMaster, budgetHistory, oracleArWorker, oracleArOps] = await Promise.all([
   readFile(resolve(root, ".node-version"), "utf8"),
   readFile(resolve(root, "package.json"), "utf8"),
   readFile(resolve(root, "package-lock.json"), "utf8"),
@@ -43,6 +47,8 @@ const [nodeVersion, packageJsonRaw, packageLock, wrangler, headers, app, optimiz
   readFile(resolve(root, "public/budget-builder-ops.js"), "utf8"),
   readFile(resolve(root, "public/budget-master.js"), "utf8"),
   readFile(resolve(root, "public/budget-history-rules.js"), "utf8"),
+  readFile(resolve(root, "public/oracle-ar-worker.js"), "utf8"),
+  readFile(resolve(root, "public/oracle-ar-ops.js"), "utf8"),
 ]);
 
 
@@ -86,6 +92,16 @@ if (!budgetBuilder.includes("buildWorkbook") || !budgetMaster.includes("Factor.x
 }
 if (!indexHtml.includes("budget-history-rules.js") || !budgetHistory.includes("HIST-2020-2026-v1")) {
   throw new Error("Historical Rule Engine ของเมนู 09 เชื่อมต่อไม่ครบ");
+}
+
+if (!indexHtml.includes('data-mode="oracleArCleaner"') || !app.includes('processOracleArCleaner')) {
+  throw new Error("เมนู 10 Oracle AR Statement Cleaner เชื่อมต่อไม่ครบ");
+}
+if (!app.includes(`oracle-ar-worker.js?v=${releaseVersion}`)) {
+  throw new Error(`Oracle AR Worker cache-busting version ไม่ตรงกับ package.json (${releaseVersion})`);
+}
+if (!oracleArWorker.includes(`oracle-ar-ops.js?v=${releaseVersion}`) || !oracleArOps.includes("buildOutputWorkbook")) {
+  throw new Error("Oracle AR Cleaner engine/worker ไม่ครบหรือ version ไม่ตรง");
 }
 
 if (packageJson.dependencies?.xlsx === "0.18.5") {

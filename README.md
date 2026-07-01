@@ -1,4 +1,4 @@
-# MergeExcels v3.5.3 — Excel, PDF & Budget Intelligence Toolkit
+# MergeExcels v3.6.0 — Excel, PDF, Budget Intelligence & Oracle AR Toolkit
 
 Web Application สำหรับจัดการไฟล์ Excel และ PDF แบบ **Client-side 100%**
 ไฟล์ของผู้ใช้ถูกประมวลผลในเบราว์เซอร์และไม่ถูกอัปโหลดขึ้น Application Server
@@ -15,6 +15,7 @@ Web Application สำหรับจัดการไฟล์ Excel และ
 7. OCR PDF to Excel — อ่าน PDF สแกน ไทย/อังกฤษ และรวมลง Sheet เดียว
 8. Optimize Excel — ลดขนาด Oracle Export, Values Only, Safe Optimize, Split by Row และ CSV
 9. DOH/DOR Budget Builder — แปลง Clean Raw Data เป็นไฟล์วิเคราะห์งบประมาณพร้อม Region, Factor และ Product Volume
+10. Oracle AR Statement Cleaner — แปลง Oracle BI Publisher HTML .xls เป็นข้อมูลรายลูกค้า พร้อม Customer Index, Summary, All Transactions และ 1 Sheet ต่อลูกค้า
 
 เมนู 06–07 มี **Road Document Mode** สำหรับแก้คำสะกด ย่อคำ และแยก `จ.` / `อ.` / `ต.` โดยตรวจสอบกับ Thai Gazetteer
 
@@ -58,6 +59,20 @@ Web Application สำหรับจัดการไฟล์ Excel และ
 
 > ระบบเลือก Recommended Work Type จาก Historical Family, Variant และ Factor Master เพื่อใช้เป็นค่าตั้งต้น โดยแยก Medium / Low Confidence ไว้ใน Validation และเก็บ Manual Override ใน Audit Log
 
+## เมนู 10 — Oracle AR Statement Cleaner
+
+สำหรับไฟล์ Statement of Account ที่ Oracle BI Publisher Export เป็น HTML แต่ใช้นามสกุล `.xls`
+
+- Auto-detect โครงสร้าง Statement, Customer Header และ Transaction Table
+- ตัด Bill Payment Form, Barcode และตารางประกอบที่ซ้ำออกอัตโนมัติ
+- สร้าง `Customer Index`, `Customer Summary`, `All Transactions` และ `Exceptions`
+- สร้าง 1 Sheet ต่อลูกค้า โดยรวม THB/USD ไว้ใน Sheet เดียวและแยกเป็น Section
+- เก็บ Opening Balance, Debit, Credit, Ending Balance และ Effective Movement จาก Running Balance
+- ทำงานใน Web Worker เพื่อไม่ล็อกหน้าเว็บ และอ่านไฟล์เพียงครั้งเดียวเพื่อลดปัญหา Browser permission
+- ประมวลผล Local 100% ไม่มีการอัปโหลดข้อมูลขึ้น Server
+
+> คีย์หลักสำหรับการรวมข้อมูลคือ `Legal Entity + Customer Code`; สกุลเงินแยกในระดับ Statement และห้ามรวม THB/USD โดยไม่มี FX Rate ที่กำหนด
+
 ## โครงสร้างสำคัญ
 
 ```text
@@ -75,6 +90,8 @@ mergeexcels/
 │   ├── budget-master.js       # Region และ Factor Master ที่ฝังในระบบ
 │   ├── budget-history-rules.js# Historical Rule Engine 2020–2026 (aggregated only)
 │   ├── budget-builder-ops.js  # Logic เมนู 09, Validation และ Audit Log
+│   ├── oracle-ar-ops.js       # Parser/Workbook builder สำหรับ Oracle AR Statement
+│   ├── oracle-ar-worker.js    # Web Worker สำหรับเมนู 10
 │   ├── styles.css
 │   ├── _headers             # CSP และ Security Headers
 │   └── vendor/              # Libraries ที่โหลดจากโดเมนเดียวกัน
@@ -125,7 +142,7 @@ Cloudflare Build Settings:
 3. ลาก **ทุกไฟล์และโฟลเดอร์ที่อยู่ข้างใน** ขึ้น Repo เดิม
 4. ต้องเห็น `public/`, `package.json`, `package-lock.json`, `wrangler.jsonc` และ `.node-version` ที่หน้า Root
 5. Commit แล้วรอ Cloudflare Deploy อัตโนมัติ
-6. เปิดเว็บและตรวจ Version Badge ต้องเป็น `v3.5.3`
+6. เปิดเว็บและตรวจ Version Badge ต้องเป็น `v3.6.0`
 
 ## Security Notes
 
@@ -142,3 +159,11 @@ Cloudflare Build Settings:
 - Medium / Low Confidence ส่งไป Validation เพื่อให้ตรวจเฉพาะข้อยกเว้น
 - Dropdown ในตารางใช้สำหรับ Override เท่านั้น ปล่อยว่างหมายถึงใช้คำแนะนำระบบ
 - Bulk Override เป็นตัวเลือกเสริม ไม่ใช่ขั้นตอนบังคับ
+
+
+## v3.6.0 — Oracle AR Statement Cleaner
+
+- เพิ่มเมนู 10 สำหรับ Oracle BI Publisher HTML `.xls`
+- สร้างข้อมูลรายลูกค้าแทนการแตกเป็นหลายร้อย/หลายพัน Sheet ตามจำนวน HTML Table
+- รองรับ Customer Index, Customer Summary, All Transactions, Exceptions และ 1 Sheet ต่อลูกค้า
+- ใช้ Running Balance เพื่อคำนวณ Effective Debit/Credit และตรวจ Reconciliation

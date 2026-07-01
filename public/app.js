@@ -124,6 +124,20 @@
       dropHint: "รองรับ .xlsx, .xls, .xlsm และ .xlsb · Factor DOH/DOR ฝังอยู่ในระบบแล้ว",
       unitLabel: "Sheet",
     },
+    oracleArCleaner: {
+      kind: "excel",
+      eyebrow: "ORACLE AR STATEMENT CLEANER",
+      title: "แปลง Oracle Statement เป็นข้อมูลรายลูกค้า",
+      description: "รวม Oracle BI Publisher HTML .xls ที่กระจายเป็นหลายร้อยตาราง ให้เป็น Customer Index, Summary, Transactions และ 1 Sheet ต่อลูกค้า",
+      button: "สร้าง AR Clean File รายลูกค้า",
+      output: "Oracle_AR_Clean_By_Customer.xlsx",
+      extension: "xlsx",
+      multiple: false,
+      deferParse: true,
+      dropTitle: "เลือก Oracle Statement of Account (.xls)",
+      dropHint: "รองรับ Oracle BI Publisher HTML .xls · ระบบตัดแบบฟอร์มชำระเงินและตารางซ้ำออกอัตโนมัติ",
+      unitLabel: "ลูกค้า",
+    },
   };
 
   const state = {
@@ -146,6 +160,11 @@
     budgetMatrix: [],
     budgetPreviewPage: 1,
     budgetPreviewPageSize: 25,
+    oracleArBuffer: null,
+    oracleArAnalysis: null,
+    oracleArWorker: null,
+    oracleArReject: null,
+    oracleArJobId: 0,
   };
 
   const PDFJS = typeof window !== "undefined" ? window.pdfjsLib : null;
@@ -173,6 +192,14 @@
     addSourceColumns: document.getElementById("addSourceColumns"),
     optimizeOptions: document.getElementById("optimizeOptions"),
     budgetBuilderOptions: document.getElementById("budgetBuilderOptions"),
+    oracleArOptions: document.getElementById("oracleArOptions"),
+    oracleCreateCustomerSheets: document.getElementById("oracleCreateCustomerSheets"),
+    oracleIncludeTransactions: document.getElementById("oracleIncludeTransactions"),
+    oracleIncludeOpeningClosing: document.getElementById("oracleIncludeOpeningClosing"),
+    oracleIncludeExceptions: document.getElementById("oracleIncludeExceptions"),
+    oracleArAnalysis: document.getElementById("oracleArAnalysis"),
+    oracleArEntity: document.getElementById("oracleArEntity"),
+    oracleArMetrics: document.getElementById("oracleArMetrics"),
     budgetAgency: document.getElementById("budgetAgency"),
     budgetSourceSheet: document.getElementById("budgetSourceSheet"),
     constructionPercent: document.getElementById("constructionPercent"),
@@ -330,6 +357,127 @@
     if (risk === "high") els.optimizeWarning.classList.add("danger");
   }
 
+  function renderOracleArAnalysis(analysis) {
+    if (!analysis || !els.oracleArAnalysis) {
+      if (els.oracleArAnalysis) els.oracleArAnalysis.classList.add("hidden");
+      return;
+    }
+    const companies = Array.isArray(analysis.companies) ? analysis.companies : [];
+    els.oracleArEntity.textContent = companies.length === 1 ? companies[0] : `${formatNumber(companies.length)} ENTITIES`;
+    els.oracleArEntity.className = "risk-badge pass";
+    const currencies = analysis.currencies || {};
+    els.oracleArMetrics.innerHTML = [
+      metricCard(formatNumber(analysis.customers), "ลูกค้าไม่ซ้ำ", "good"),
+      metricCard(formatNumber(analysis.statements), "Statement / Currency"),
+      metricCard(formatNumber(analysis.transactionRows), "Transaction Rows"),
+      metricCard(formatNumber(analysis.sourceTables), "ตารางต้นทางที่ถูกรวม"),
+      metricCard(formatNumber(currencies.THB || 0), "THB Statements"),
+      metricCard(formatNumber(currencies.USD || 0), "USD Statements"),
+      metricCard(formatNumber(analysis.allRows), "Rows รวม Opening/Closing"),
+      metricCard(formatNumber(analysis.exceptions), "Exceptions", analysis.exceptions ? "warn" : "good"),
+    ].join("");
+    els.oracleArAnalysis.classList.remove("hidden");
+  }
+
+  function terminateOracleArWorker(reason = "") {
+    if (state.oracleArWorker) {
+      state.oracleArWorker.terminate();
+      state.oracleArWorker = null;
+    }
+    const rejectPending = state.oracleArReject;
+    state.oracleArReject = null;
+    state.oracleArJobId += 1;
+    if (reason && rejectPending) rejectPending(new Error(reason));
+  }
+
+  function runOracleArWorker(action, options = {}) {
+    if (!state.oracleArBuffer) return Promise.reject(new Error("ไม่พบข้อมูลไฟล์ Oracle AR กรุณาเลือกไฟล์ใหม่"));
+    terminateOracleArWorker();
+    const jobId = state.oracleArJobId;
+    const worker = new Worker(`./oracle-ar-worker.js?v=3.6.0`);
+    state.oracleArWorker = worker;
+
+    return new Promise((resolve, reject) => {
+      state.oracleArReject = reject;
+      worker.onmessage = (event) => {
+        if (jobId !== state.oracleArJobId) return;
+        const message = event.data || {};
+        if (message.type === "progress") {
+          setStatus(message.message || "กำลังประมวลผล Oracle AR...", "working", message.progress);
+          return;
+        }
+        if (message.type === "error") {
+          state.oracleArReject = null;
+          state.oracleArWorker = null;
+          worker.terminate();
+          reject(new Error(message.message || "ไม่สามารถประมวลผล Oracle AR Statement ได้"));
+          return;
+        }
+        if (message.type === "analysis" || message.type === "result") {
+          state.oracleArReject = null;
+          state.oracleArWorker = null;
+          worker.terminate();
+          resolve(message);
+        }
+      };
+      worker.onerror = (event) => {
+        state.oracleArReject = null;
+        state.oracleArWorker = null;
+        worker.terminate();
+        reject(new Error(event.message || "Oracle AR Web Worker ทำงานผิดพลาด"));
+      };
+      const buffer = state.oracleArBuffer.slice(0);
+      worker.postMessage({
+        action,
+        buffer,
+        fileName: state.files[0] ? state.files[0].name : "Oracle_AR_Statement.xls",
+        options,
+      }, [buffer]);
+    });
+  }
+
+  async function analyzeOracleArFile(file) {
+    state.busy = true;
+    state.oracleArAnalysis = null;
+    state.oracleArBuffer = await file.arrayBuffer();
+    if (els.oracleArAnalysis) els.oracleArAnalysis.classList.add("hidden");
+    els.cancelButton.classList.remove("hidden");
+    renderFiles();
+    try {
+      const result = await runOracleArWorker("analyze");
+      state.oracleArAnalysis = result.analysis;
+      if (state.parsed[0]) state.parsed[0].unitCount = result.analysis.customers;
+      renderOracleArAnalysis(result.analysis);
+      setStatus(`วิเคราะห์สำเร็จ: ${formatNumber(result.analysis.customers)} ลูกค้า · ${formatNumber(result.analysis.transactionRows)} Transactions`, "success", 100);
+    } finally {
+      state.busy = false;
+      els.cancelButton.classList.add("hidden");
+      renderFiles();
+    }
+  }
+
+  function getOracleArOptions() {
+    return {
+      createCustomerSheets: els.oracleCreateCustomerSheets.checked,
+      includeAllTransactions: els.oracleIncludeTransactions.checked,
+      includeOpeningClosing: els.oracleIncludeOpeningClosing.checked,
+      includeExceptions: els.oracleIncludeExceptions.checked,
+    };
+  }
+
+  function cancelActiveJob() {
+    if (state.mode === "oracleArCleaner" && state.oracleArWorker) {
+      terminateOracleArWorker("ยกเลิกการประมวลผลแล้ว");
+      state.busy = false;
+      els.cancelButton.classList.add("hidden");
+      els.processButton.textContent = currentConfig().button;
+      renderFiles();
+      setStatus("ยกเลิกการประมวลผลแล้ว ไฟล์ต้นฉบับไม่ได้ถูกแก้ไข", "idle", 0);
+      return;
+    }
+    cancelOptimizeJob();
+  }
+
   function renderIntegrityReport(report) {
     if (!report) {
       els.integrityPanel.classList.add("hidden");
@@ -363,7 +511,7 @@
     if (policy.blocked) return Promise.reject(new Error(policy.message));
     terminateOptimizeWorker();
     const jobId = state.optimizeJobId;
-    const worker = new Worker(`./optimize-worker.js?v=3.5.3`);
+    const worker = new Worker(`./optimize-worker.js?v=3.6.0`);
     state.optimizeWorker = worker;
 
     return new Promise(async (resolve, reject) => {
@@ -739,6 +887,7 @@
     els.combineOptions.classList.toggle("hidden", mode !== "combineExcel");
     els.optimizeOptions.classList.toggle("hidden", mode !== "optimizeExcel");
     els.budgetBuilderOptions.classList.toggle("hidden", mode !== "budgetBuilder");
+    els.oracleArOptions.classList.toggle("hidden", mode !== "oracleArCleaner");
     if (mode === "budgetBuilder") populateBudgetWorkTypes();
     const usesPageRange = mode === "pdf2excel" || mode === "ocr2excel";
     document.body.classList.toggle("pdf-mode", config.kind === "pdf" && !usesPageRange);
@@ -762,7 +911,9 @@
 
   function resetFiles() {
     const hadWorker = !!state.optimizeWorker;
+    const hadOracleWorker = !!state.oracleArWorker;
     terminateOptimizeWorker(hadWorker ? "ยกเลิกการประมวลผลแล้ว" : "");
+    terminateOracleArWorker(hadOracleWorker ? "ยกเลิกการประมวลผลแล้ว" : "");
     state.busy = false;
     state.files = [];
     state.parsed = [];
@@ -772,7 +923,10 @@
     state.budgetRecords = [];
     state.budgetMatrix = [];
     state.budgetPreviewPage = 1;
+    state.oracleArBuffer = null;
+    state.oracleArAnalysis = null;
     if (els.budgetPreviewPanel) els.budgetPreviewPanel.classList.add("hidden");
+    if (els.oracleArAnalysis) els.oracleArAnalysis.classList.add("hidden");
     clearPdfState();
     els.fileInput.value = "";
     els.analysisPanel.classList.add("hidden");
@@ -803,6 +957,7 @@
     if (!config.multiple && valid.length !== 1) {
       if (state.mode === "optimizeExcel") throw new Error("Optimize Excel รองรับครั้งละ 1 ไฟล์เท่านั้น");
       if (state.mode === "budgetBuilder") throw new Error("Budget Builder รองรับครั้งละ 1 ไฟล์เท่านั้น");
+      if (state.mode === "oracleArCleaner") throw new Error("Oracle AR Statement Cleaner รองรับครั้งละ 1 ไฟล์เท่านั้น");
       throw new Error(config.kind === "pdf" ? "Split PDF รองรับครั้งละ 1 ไฟล์เท่านั้น" : "Split File รองรับครั้งละ 1 ไฟล์เท่านั้น");
     }
     return valid;
@@ -892,6 +1047,9 @@
         populateBudgetWorkTypes();
         clearBudgetPreview();
         await prepareBudgetDraft();
+      } else if (state.mode === "oracleArCleaner") {
+        els.outputName.value = `${ExcelOps.basename(files[0].name)}_Clean_By_Customer.xlsx`;
+        await analyzeOracleArFile(files[0]);
       } else {
         setStatus("อ่านไฟล์เรียบร้อย พร้อมประมวลผล", "success", 0);
       }
@@ -901,6 +1059,13 @@
         els.cancelButton.classList.add("hidden");
         renderFiles();
         setStatus("ยกเลิกการวิเคราะห์แล้ว", "idle", 0);
+      } else if (state.mode === "oracleArCleaner" && state.files.length === 1) {
+        terminateOracleArWorker();
+        state.busy = false;
+        state.oracleArAnalysis = null;
+        els.cancelButton.classList.add("hidden");
+        renderFiles();
+        setStatus(error.message || "ไม่สามารถวิเคราะห์ Oracle AR Statement ได้", "error", 0);
       } else if (state.mode === "optimizeExcel" && state.files.length === 1) {
         // คง File object ไว้ในหน้าจอเพื่อให้ผู้ใช้เห็นชื่อ/ขนาดและอ่านข้อความผิดพลาด
         // ไม่ Reset จนไฟล์หายเหมือนเวอร์ชันก่อน
@@ -940,7 +1105,9 @@
       row.draggable = reorderable;
       const unitText = state.mode === "optimizeExcel" && !state.optimizeAnalysis
         ? (state.optimizeAnalysisError ? "วิเคราะห์ไม่สำเร็จ" : "รอวิเคราะห์")
-        : config.kind === "pdf" ? `${item.unitCount} หน้า` : `${item.unitCount} Sheet`;
+        : state.mode === "oracleArCleaner"
+          ? (state.oracleArAnalysis ? `${item.unitCount} ลูกค้า` : "รอวิเคราะห์")
+          : config.kind === "pdf" ? `${item.unitCount} หน้า` : `${item.unitCount} Sheet`;
       const orderBadge = reorderable ? `<span class="file-order">${index + 1}</span>` : "";
       const moveControls = reorderable
         ? `<div class="file-move">
@@ -969,6 +1136,8 @@
       ready = state.parsed.length === 1 && !!state.optimizeAnalysis;
     } else if (state.mode === "budgetBuilder") {
       ready = state.parsed.length === 1 && state.budgetRecords.length > 0;
+    } else if (state.mode === "oracleArCleaner") {
+      ready = state.parsed.length === 1 && !!state.oracleArAnalysis && !!state.oracleArBuffer;
     } else {
       ready = state.parsed.length >= (config.minimumFiles || 1);
     }
@@ -1119,6 +1288,13 @@
       els.fileInput.value = "";
       els.analysisPanel.classList.add("hidden");
       els.integrityPanel.classList.add("hidden");
+    }
+    if (state.mode === "oracleArCleaner") {
+      terminateOracleArWorker();
+      state.oracleArBuffer = null;
+      state.oracleArAnalysis = null;
+      els.fileInput.value = "";
+      if (els.oracleArAnalysis) els.oracleArAnalysis.classList.add("hidden");
     }
     renderFiles();
     setStatus(state.parsed.length ? "พร้อมประมวลผล" : "พร้อมใช้งาน", "idle", 0);
@@ -1374,6 +1550,15 @@
     return `สร้าง ${outputName} เรียบร้อย · ${formatNumber(result.report.total)} รายการ · Values Only · ต้องตรวจ ${formatNumber(result.report.needsReview)}`;
   }
 
+  async function processOracleArCleaner() {
+    if (!state.oracleArAnalysis || !state.oracleArBuffer) throw new Error("กรุณาเลือกและรอวิเคราะห์ Oracle AR Statement ก่อน");
+    const options = getOracleArOptions();
+    const result = await runOracleArWorker("clean", options);
+    const outputName = ensureExtension(els.outputName.value, "xlsx");
+    downloadBlob(new Blob([result.buffer], { type: result.mime || "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }), outputName);
+    return `สร้าง ${outputName} เรียบร้อย · ${formatNumber(result.report.customers)} ลูกค้า · ${formatNumber(result.report.transactionRows)} Transactions · ${formatNumber(result.report.outputSheets)} Sheets`;
+  }
+
   async function processOptimizeExcel() {
     const file = state.files[0];
     if (!file || !state.optimizeAnalysis) throw new Error("กรุณาเลือกและรอวิเคราะห์ไฟล์ Excel ก่อน");
@@ -1404,12 +1589,14 @@
       ? state.pages.length >= 1
       : state.mode === "optimizeExcel"
         ? state.parsed.length === 1 && !!state.optimizeAnalysis
-        : state.parsed.length >= (config.minimumFiles || 1);
+        : state.mode === "oracleArCleaner"
+          ? state.parsed.length === 1 && !!state.oracleArAnalysis && !!state.oracleArBuffer
+          : state.parsed.length >= (config.minimumFiles || 1);
     if (state.busy || !ready) return;
     state.busy = true;
     renderFiles();
     els.processButton.textContent = "กำลังประมวลผล...";
-    els.cancelButton.classList.toggle("hidden", state.mode !== "optimizeExcel");
+    els.cancelButton.classList.toggle("hidden", state.mode !== "optimizeExcel" && state.mode !== "oracleArCleaner");
 
     try {
       let message;
@@ -1420,6 +1607,7 @@
       else if (state.mode === "ocr2excel") message = await processOcr2Excel();
       else if (state.mode === "optimizeExcel") message = await processOptimizeExcel();
       else if (state.mode === "budgetBuilder") message = await processBudgetBuilder();
+      else if (state.mode === "oracleArCleaner") message = await processOracleArCleaner();
       else if (state.mode === "mergePdf") message = await processMergePdf();
       else message = await processSplitPdf();
       setStatus(message, "success", 100);
@@ -1442,7 +1630,7 @@
   els.fileInput.addEventListener("change", (event) => addFiles(event.target.files));
   els.resetButton.addEventListener("click", resetFiles);
   els.processButton.addEventListener("click", processFiles);
-  els.cancelButton.addEventListener("click", cancelOptimizeJob);
+  els.cancelButton.addEventListener("click", cancelActiveJob);
   els.budgetAgency.addEventListener("change", () => { populateBudgetWorkTypes(); clearBudgetPreview("เปลี่ยนหน่วยงานแล้ว กรุณาวิเคราะห์รายการใหม่"); });
   els.budgetSourceSheet.addEventListener("change", () => clearBudgetPreview("เปลี่ยน Source Sheet แล้ว กรุณาวิเคราะห์รายการใหม่"));
   [els.constructionPercent, els.maintenancePercent, els.defaultConstructionType, els.defaultMaintenanceType, els.projectRowsOnly, els.roadBudgetOnly]

@@ -1,8 +1,8 @@
 {
   "name": "mergeexcels",
-  "version": "3.5.3",
+  "version": "3.6.0",
   "private": true,
-  "description": "Browser-based Excel/PDF toolkit with Excel optimization and DOH/DOR Budget Builder for Cloudflare Workers Static Assets",
+  "description": "Browser-based Excel/PDF toolkit with Excel optimization, DOH/DOR Budget Builder and Oracle AR Statement Cleaner for Cloudflare Workers Static Assets",
   "engines": {
     "node": ">=22"
   },
@@ -10,7 +10,7 @@
     "vendor": "node scripts/copy-vendor.mjs",
     "dev": "npm run vendor && wrangler dev",
     "deploy": "npm run vendor && wrangler deploy",
-    "test": "node tests/excel-ops.test.cjs && node tests/pdf-ops.test.cjs && node tests/text-correct.test.cjs && node tests/pdftable-ops.test.cjs && node tests/optimize-ops.test.cjs && node tests/optimize-worker.test.cjs && node tests/budget-builder-ops.test.cjs",
+    "test": "node tests/excel-ops.test.cjs && node tests/pdf-ops.test.cjs && node tests/text-correct.test.cjs && node tests/pdftable-ops.test.cjs && node tests/optimize-ops.test.cjs && node tests/optimize-worker.test.cjs && node tests/budget-builder-ops.test.cjs && node tests/oracle-ar-ops.test.cjs && node tests/oracle-ar-worker.test.cjs",
     "verify": "npm test && node scripts/check-release.mjs"
   },
   "dependencies": {
