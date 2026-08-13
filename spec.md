@@ -22,6 +22,9 @@ Office Toolkit is a local-first web application for common office file workflows
 10. Oracle AR Statement Cleaner
 11. Reduce PDF Size
 12. PDF Page Tools (Phase 1A, v4.1.0; implemented pending deployed UAT)
+13. PDF Watermark & Stamp (Phase 1B, v4.2.0; implemented pending deployed UAT)
+14. Image to PDF (Phase 1C, v4.3.0; implemented pending deployed UAT)
+15. PDF Scan Cleanup (Phase 1D, v4.4.0; implemented pending deployed UAT)
 
 ## Core non-functional requirements
 - Local-first: source files are processed on the user's device for core web modules.
@@ -48,3 +51,19 @@ Office Toolkit is a local-first web application for common office file workflows
 6. Output is inspected for data integrity or document/page integrity.
 7. Release notes and known limitations are recorded.
 8. Cloudflare dry-run/deploy verification is performed when the environment supports it; otherwise state that it was not executed.
+
+## Phase 1C — Image to PDF
+Browser-local conversion of JPG/PNG/WebP images into one PDF. Supports ordered multi-file input, A4 fit or original image size, orientation, margin and JPEG quality controls. No OCR is implied.
+
+
+## Phase 1D — PDF Scan Cleanup
+Browser-local raster cleanup for scanned PDFs. The module can render pages at controlled DPI, apply grayscale and contrast, analyze low-ink blank candidates and consecutive duplicate candidates, and optionally remove only analyzed candidates before exporting a new rasterized PDF. Automatic crop and heavy deskew/OCR are intentionally deferred because reliable results require stronger detection and representative UAT. Rasterization may remove searchable text/vector properties and invalidate existing digital signatures.
+
+
+## Batch Rename (Phase 1E)
+- Accepts multiple local files of any type.
+- Original files are never changed in place.
+- Live preview is generated from filename rules before export.
+- Supported rules: prefix, suffix, literal find/replace, optional date token, optional running number, separator, filename cleanup, preserve extension.
+- Case-insensitive collision detection blocks export.
+- Output is a ZIP containing renamed copies plus a UTF-8 `rename_log.csv`.

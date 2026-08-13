@@ -32,6 +32,8 @@ const requiredFiles = [
   "public/oracle-ar-worker.js",
   "tests/oracle-ar-ops.test.cjs",
   "tests/oracle-ar-worker.test.cjs",
+  "public/batch-rename-ops.js",
+  "tests/batch-rename-ops.test.cjs",
 ];
 
 for (const relativePath of requiredFiles) {
@@ -119,6 +121,12 @@ if (!indexHtml.includes('data-mode="pdfPageTools"') || !app.includes('processPdf
 if (!app.includes("buildPdfFromPagePlan") || !indexHtml.includes("pdfPageToolsAction")) {
   throw new Error("PDF Page Tools engine/options ไม่ครบ");
 }
+if (!indexHtml.includes('data-mode="pdfWatermark"') || !app.includes('processPdfWatermark')) {
+  throw new Error("Phase 1B PDF Watermark & Stamp เชื่อมต่อไม่ครบ");
+}
+if (!app.includes("applyPdfWatermark") || !indexHtml.includes("pdfWatermarkRangeMode")) {
+  throw new Error("PDF Watermark engine/options ไม่ครบ");
+}
 if (!app.includes(`oracle-ar-worker.js?v=${releaseVersion}`)) {
   throw new Error(`Oracle AR Worker cache-busting version ไม่ตรงกับ package.json (${releaseVersion})`);
 }
@@ -126,6 +134,19 @@ if (!oracleArWorker.includes(`oracle-ar-ops.js?v=${releaseVersion}`) || !oracleA
   throw new Error("Oracle AR Cleaner engine/worker ไม่ครบหรือ version ไม่ตรง");
 }
 
+
+if (!indexHtml.includes('data-mode="pdfScanCleanup"') || !app.includes('processPdfScanCleanup')) {
+  throw new Error("Phase 1D PDF Scan Cleanup เชื่อมต่อไม่ครบ");
+}
+if (!app.includes("analyzePdfScan") || !indexHtml.includes("pdfScanRemoveBlank")) {
+  throw new Error("PDF Scan Cleanup analysis/options ไม่ครบ");
+}
+if (!indexHtml.includes('data-mode="batchRename"') || !app.includes('processBatchRename')) {
+  throw new Error("Phase 1E Batch Rename เชื่อมต่อไม่ครบ");
+}
+if (!indexHtml.includes('batch-rename-ops.js') || !indexHtml.includes('batchRenamePreview')) {
+  throw new Error("Batch Rename engine/options ไม่ครบ");
+}
 if (packageJson.dependencies?.xlsx === "0.18.5") {
   console.warn("WARNING: xlsx@0.18.5 has known security advisories; see SECURITY.md.");
 }

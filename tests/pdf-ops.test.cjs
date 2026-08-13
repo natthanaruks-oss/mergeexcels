@@ -1,5 +1,6 @@
 const assert = require("node:assert/strict");
-const PDFLib = require("pdf-lib");
+let PDFLib;
+try { PDFLib = require("pdf-lib"); } catch { PDFLib = require("../public/vendor/pdf-lib.min.js"); }
 const PdfOps = require("../public/pdf-ops.js");
 
 async function createPdf(pageCount, widthOffset = 0) {
@@ -42,6 +43,44 @@ async function createPdf(pageCount, widthOffset = 0) {
   assert.equal(PdfOps.normalizeRotation(-90), 270);
   assert.equal(PdfOps.normalizeRotation(450), 90);
 
+  assert.deepEqual(PdfOps.parsePageRange("1,3-4", 5), [0, 2, 3]);
+  assert.deepEqual(PdfOps.parsePageRange("4-2", 5), [1, 2, 3]);
+  assert.throws(() => PdfOps.parsePageRange("0", 5), /within/);
+  const wmPos = PdfOps.resolveWatermarkPosition(500, 700, 100, 20, "bottomRight");
+  assert(wmPos.x > 300 && wmPos.y < 50);
+
+  const watermarkBytes = await PdfOps.applyPdfWatermark(PDFLib, bytesA, {
+    text: "DRAFT",
+    position: "center",
+    fontSize: 42,
+    opacity: 0.2,
+    rotation: -45,
+    pageIndices: [0],
+    addPageNumber: true,
+    addFilename: true,
+    filename: "Source.pdf",
+  });
+  const watermarkDoc = await PDFLib.PDFDocument.load(watermarkBytes);
+  assert.equal(watermarkDoc.getPageCount(), 2);
+  assert(watermarkBytes.length > bytesA.length, "Stamped PDF should contain additional drawing content");
+
+  await assert.rejects(
+    () => PdfOps.applyPdfWatermark(PDFLib, bytesA, { text: "ทดสอบ", pageIndices: [0] }),
+    /Latin\/English/
+  );
+
+  const portraitLayout = PdfOps.calculateImagePageLayout(1200, 1800, { pageSize: "a4", orientation: "auto", marginMm: 10 });
+  assert(portraitLayout.pageHeight > portraitLayout.pageWidth);
+  assert(portraitLayout.drawWidth <= portraitLayout.pageWidth);
+  assert(portraitLayout.drawHeight <= portraitLayout.pageHeight);
+
+  const landscapeLayout = PdfOps.calculateImagePageLayout(1800, 1200, { pageSize: "a4", orientation: "auto", marginMm: 10 });
+  assert(landscapeLayout.pageWidth > landscapeLayout.pageHeight);
+
+  const originalLayout = PdfOps.calculateImagePageLayout(960, 480, { pageSize: "original" });
+  assert.equal(Math.round(originalLayout.pageWidth), 720);
+  assert.equal(Math.round(originalLayout.pageHeight), 360);
+
   const optimizedBytes = await PdfOps.optimizePdfStructure(PDFLib, bytesA);
   const optimized = await PDFLib.PDFDocument.load(optimizedBytes);
   assert.equal(optimized.getPageCount(), 2);
@@ -55,7 +94,24 @@ async function createPdf(pageCount, widthOffset = 0) {
   }
 
   assert.equal(PdfOps.sanitizeFilename('A<B>:C/"D"'), "A_B__C__D_");
-  console.log("All PDF operation tests passed.");
+  
+// Phase 1D — scan cleanup detection helpers
+{
+  const blank = PdfOps.classifyScanPageMetrics(0.002, 1);
+  assert.equal(blank.blank, true);
+  assert.equal(blank.duplicatePrev, false);
+
+  const duplicate = PdfOps.classifyScanPageMetrics(0.08, 0.005);
+  assert.equal(duplicate.blank, false);
+  assert.equal(duplicate.duplicatePrev, true);
+
+  const different = PdfOps.fingerprintDifference([0, 0, 0, 0], [15, 15, 15, 15]);
+  assert.equal(different, 1);
+
+  const same = PdfOps.fingerprintDifference([4, 5, 6], [4, 5, 6]);
+  assert.equal(same, 0);
+}
+console.log("All PDF operation tests passed.");
 })().catch((error) => {
   console.error(error);
   process.exitCode = 1;

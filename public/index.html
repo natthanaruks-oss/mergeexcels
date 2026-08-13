@@ -5,27 +5,28 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="Office Toolkit สำหรับ Excel, PDF, Conversion และ Business Data โดยประมวลผลไฟล์แบบ Local-first ในเบราว์เซอร์" />
     <title>Office Toolkit — Local-first File Utility</title>
-    <link rel="stylesheet" href="./styles.css?v=4.1.0" />
-    <script defer src="./vendor/xlsx.full.min.js?v=4.1.0"></script>
-    <script defer src="./vendor/jszip.min.js?v=4.1.0"></script>
-    <script defer src="./vendor/pdf-lib.min.js?v=4.1.0"></script>
-    <script defer src="./vendor/pdf.min.js?v=4.1.0"></script>
-    <script defer src="./excel-ops.js?v=4.1.0"></script>
-    <script defer src="./pdf-ops.js?v=4.1.0"></script>
-    <script defer src="./thai-roads-config.js?v=4.1.0"></script>
-    <script defer src="./text-correct.js?v=4.1.0"></script>
-    <script defer src="./pdftable-ops.js?v=4.1.0"></script>
-    <script defer src="./optimize-ops.js?v=4.1.0"></script>
-    <script defer src="./budget-master.js?v=4.1.0"></script>
-    <script defer src="./budget-history-rules.js?v=4.1.0"></script>
-    <script defer src="./budget-builder-ops.js?v=4.1.0"></script>
-    <script defer src="./app.js?v=4.1.0"></script>
+    <link rel="stylesheet" href="./styles.css?v=4.5.0" />
+    <script defer src="./vendor/xlsx.full.min.js?v=4.5.0"></script>
+    <script defer src="./vendor/jszip.min.js?v=4.5.0"></script>
+    <script defer src="./vendor/pdf-lib.min.js?v=4.5.0"></script>
+    <script defer src="./vendor/pdf.min.js?v=4.5.0"></script>
+    <script defer src="./excel-ops.js?v=4.5.0"></script>
+    <script defer src="./pdf-ops.js?v=4.5.0"></script>
+    <script defer src="./thai-roads-config.js?v=4.5.0"></script>
+    <script defer src="./text-correct.js?v=4.5.0"></script>
+    <script defer src="./pdftable-ops.js?v=4.5.0"></script>
+    <script defer src="./optimize-ops.js?v=4.5.0"></script>
+    <script defer src="./budget-master.js?v=4.5.0"></script>
+    <script defer src="./budget-history-rules.js?v=4.5.0"></script>
+    <script defer src="./budget-builder-ops.js?v=4.5.0"></script>
+    <script defer src="./batch-rename-ops.js?v=4.5.0"></script>
+    <script defer src="./app.js?v=4.5.0"></script>
   </head>
   <body>
     <header class="site-header">
       <div class="brand-mark" aria-hidden="true">O</div>
       <div class="brand-copy">
-        <div class="brand-title-row"><h1>Office Toolkit</h1><span class="version-badge">v4.1.0</span></div>
+        <div class="brand-title-row"><h1>Office Toolkit</h1><span class="version-badge">v4.5.0</span></div>
         <p>All-in-one Local Office File Utility · Excel · PDF · Conversion · Business Tools</p>
       </div>
       <span class="header-local-badge">LOCAL-FIRST</span>
@@ -39,7 +40,7 @@
             <h2 id="toolCatalogTitle">เลือกเครื่องมือที่ต้องการใช้</h2>
             <p>ฟังก์ชันเดิมทั้งหมดยังคงอยู่ เพียงจัดใหม่เป็นหมวดเพื่อให้ค้นหาและขยายระบบได้ง่ายขึ้น</p>
           </div>
-          <div class="catalog-count"><strong>12</strong><span>Tools ready</span></div>
+          <div class="catalog-count"><strong>14</strong><span>Tools ready</span></div>
         </div>
         <nav class="category-tabs" aria-label="หมวดเครื่องมือ">
           <button class="category-tab active" type="button" data-category="all" aria-pressed="true">ทั้งหมด</button>
@@ -136,6 +137,36 @@
           <span>จัดหน้า PDF แบบเห็นภาพ: Rotate · Delete · Duplicate · Extract · Split · Blank Page</span>
           <small>Reorder · Odd/Even · Split every N · Local 100%</small>
         </button>
+        <button class="mode-card pdf-card watermark-card" type="button" data-mode="pdfWatermark" data-category="pdf" aria-pressed="false">
+          <span class="mode-number">13</span>
+          <span class="mode-type">PDF · STAMP</span>
+          <strong>PDF Watermark & Stamp</strong>
+          <span>ใส่ DRAFT · CONFIDENTIAL · INTERNAL USE · Custom text · Page number · Filename</span>
+          <small>Position · Opacity · Rotation · Page range · Preview · Local 100%</small>
+        </button>
+        <button class="mode-card convert-card image-pdf-card" type="button" data-mode="imageToPdf" data-category="conversion" aria-pressed="false">
+          <span class="mode-number">14</span>
+          <span class="mode-type">IMAGE → PDF</span>
+          <strong>Image to PDF</strong>
+          <span>รวม JPG · PNG · WebP หลายภาพเป็น PDF เดียว พร้อมจัดลำดับและกำหนดขนาดหน้า</span>
+          <small>A4 Fit · Original Size · Portrait/Landscape · Margin · Local 100%</small>
+        </button>
+        <button class="mode-card pdf-card scan-cleanup-card" type="button" data-mode="pdfScanCleanup" data-category="pdf" aria-pressed="false">
+          <span class="mode-number">15</span>
+          <span class="mode-type">PDF · SCAN CLEANUP</span>
+          <strong>PDF Scan Cleanup</strong>
+          <span>ทำความสะอาด PDF สแกน ลดพื้นเทา ตรวจหน้าว่าง/หน้าซ้ำ และสร้างไฟล์ใหม่ที่อ่านง่ายขึ้น</span>
+          <small>Grayscale · Contrast · Blank/Duplicate detection · Recompress · Local 100%</small>
+        </button>
+        <button class="mode-card file-card batch-rename-card" type="button" data-mode="batchRename" data-category="conversion" aria-pressed="false">
+          <span class="mode-number">16</span>
+          <span class="mode-type">FILE · BATCH RENAME</span>
+          <strong>Batch Rename</strong>
+          <span>เปลี่ยนชื่อหลายไฟล์พร้อมกันแบบ Preview ก่อนทำ พร้อม Prefix/Suffix, Running Number, Date และ Find/Replace</span>
+          <small>Collision Check · Filename Cleanup · ZIP + Rename Log · Local 100%</small>
+        </button>
+
+
       </section>
 
       <section class="workspace">
@@ -175,8 +206,8 @@
         <section id="pageGrid" class="page-grid hidden" aria-label="พรีวิวและจัดลำดับหน้า PDF">
           <div class="page-grid-head">
             <div>
-              <h3>พรีวิวและจัดลำดับหน้า</h3>
-              <small>ลากการ์ด หรือกดปุ่ม ‹ › เพื่อสลับลำดับ · กด × เพื่อลบหน้า</small>
+              <h3 id="pageGridTitle">พรีวิวและจัดลำดับหน้า</h3>
+              <small id="pageGridHint">ลากการ์ด หรือกดปุ่ม ‹ › เพื่อสลับลำดับ · กด × เพื่อลบหน้า</small>
             </div>
             <span id="pageGridCount" class="page-grid-count">0 หน้า</span>
           </div>
@@ -443,6 +474,216 @@
           </div>
         </section>
 
+
+        <section id="pdfWatermarkOptions" class="options-panel pdf-watermark-panel hidden" aria-labelledby="pdfWatermarkTitle">
+          <div class="panel-heading">
+            <div>
+              <h3 id="pdfWatermarkTitle">PDF Watermark & Stamp</h3>
+              <small>ใส่ตราประทับลงในสำเนา PDF โดยไฟล์ต้นฉบับไม่ถูกแก้ไข · Preview ด้านบนจะแสดงตำแหน่งโดยประมาณ</small>
+            </div>
+            <span class="local-badge">100% LOCAL</span>
+          </div>
+          <div class="pdf-watermark-grid">
+            <label class="field-group">
+              <span>Stamp preset</span>
+              <select id="pdfWatermarkPreset">
+                <option value="draft" selected>DRAFT</option>
+                <option value="confidential">CONFIDENTIAL</option>
+                <option value="internal">INTERNAL USE</option>
+                <option value="custom">Custom text</option>
+              </select>
+            </label>
+            <label class="field-group">
+              <span>Stamp text</span>
+              <input id="pdfWatermarkText" type="text" maxlength="120" value="DRAFT" spellcheck="false" />
+              <small>รุ่นนี้ใช้ PDF standard font: รองรับ Latin/English; ภาษาไทยจะถูกปฏิเสธแทนการสร้างไฟล์เพี้ยน</small>
+            </label>
+            <label class="field-group">
+              <span>Position</span>
+              <select id="pdfWatermarkPosition">
+                <option value="center" selected>Center</option>
+                <option value="topLeft">Top Left</option>
+                <option value="topCenter">Top Center</option>
+                <option value="topRight">Top Right</option>
+                <option value="middleLeft">Middle Left</option>
+                <option value="middleRight">Middle Right</option>
+                <option value="bottomLeft">Bottom Left</option>
+                <option value="bottomCenter">Bottom Center</option>
+                <option value="bottomRight">Bottom Right</option>
+              </select>
+            </label>
+            <label class="field-group">
+              <span>Font size</span>
+              <input id="pdfWatermarkFontSize" type="number" min="8" max="160" step="1" value="48" />
+            </label>
+            <label class="field-group">
+              <span>Opacity</span>
+              <input id="pdfWatermarkOpacity" type="range" min="0.05" max="1" step="0.05" value="0.2" />
+              <small id="pdfWatermarkOpacityValue">20%</small>
+            </label>
+            <label class="field-group">
+              <span>Rotation</span>
+              <select id="pdfWatermarkRotation">
+                <option value="0">0°</option>
+                <option value="-45" selected>-45°</option>
+                <option value="45">45°</option>
+                <option value="90">90°</option>
+              </select>
+            </label>
+            <label class="field-group">
+              <span>Page range</span>
+              <select id="pdfWatermarkRangeMode">
+                <option value="all" selected>All pages</option>
+                <option value="first">First page only</option>
+                <option value="last">Last page only</option>
+                <option value="custom">Custom pages / range</option>
+              </select>
+            </label>
+            <label id="pdfWatermarkCustomRangeField" class="field-group hidden">
+              <span>Custom pages</span>
+              <input id="pdfWatermarkCustomRange" type="text" placeholder="เช่น 1,3,5-8" spellcheck="false" />
+              <small>รองรับเลขหน้าและช่วงหน้า คั่นด้วย comma</small>
+            </label>
+          </div>
+          <div class="option-check-grid">
+            <label class="check-row compact">
+              <input id="pdfWatermarkPageNumber" type="checkbox" />
+              <span><strong>Add page number</strong><small>เพิ่ม “Page X of Y” ด้านล่างกึ่งกลางทุกหน้าที่เลือก</small></span>
+            </label>
+            <label class="check-row compact">
+              <input id="pdfWatermarkFilename" type="checkbox" />
+              <span><strong>Add filename</strong><small>เพิ่มชื่อไฟล์ต้นฉบับด้านล่างซ้ายทุกหน้าที่เลือก</small></span>
+            </label>
+          </div>
+          <div class="pdf-watermark-note">
+            <strong>ข้อควรรู้:</strong> การเพิ่ม Watermark/Stamp จะสร้าง PDF ใหม่และอาจทำให้ Digital Signature เดิมไม่ผ่านการตรวจสอบหลังแก้ไข
+          </div>
+        </section>
+
+
+        <section id="imageToPdfOptions" class="options-panel image-to-pdf-panel hidden" aria-labelledby="imageToPdfTitle">
+          <div class="panel-heading">
+            <div>
+              <h3 id="imageToPdfTitle">Image to PDF</h3>
+              <small>รวมหลายภาพเป็น PDF เดียวตามลำดับไฟล์ · ลากหรือใช้ ▲▼ ในรายการไฟล์เพื่อจัดลำดับก่อน Export</small>
+            </div>
+            <span class="local-badge">100% LOCAL</span>
+          </div>
+          <div class="image-to-pdf-grid">
+            <label class="field-group">
+              <span>Page size</span>
+              <select id="imagePdfPageSize">
+                <option value="a4" selected>A4 Fit — แนะนำ</option>
+                <option value="original">Original image size</option>
+              </select>
+            </label>
+            <label class="field-group">
+              <span>Orientation</span>
+              <select id="imagePdfOrientation">
+                <option value="auto" selected>Auto by image</option>
+                <option value="portrait">Portrait</option>
+                <option value="landscape">Landscape</option>
+              </select>
+              <small>ใช้กับ A4 Fit; Original size จะใช้สัดส่วนภาพจริง</small>
+            </label>
+            <label class="field-group">
+              <span>Margin</span>
+              <select id="imagePdfMargin">
+                <option value="0">0 mm</option>
+                <option value="5">5 mm</option>
+                <option value="10" selected>10 mm</option>
+                <option value="15">15 mm</option>
+                <option value="20">20 mm</option>
+              </select>
+            </label>
+            <label class="field-group">
+              <span>Image quality</span>
+              <select id="imagePdfQuality">
+                <option value="0.92">High — 92%</option>
+                <option value="0.82" selected>Balanced — 82%</option>
+                <option value="0.70">Small file — 70%</option>
+              </select>
+              <small>PNG ที่มี transparency จะถูกวางบนพื้นหลังสีขาวเมื่อแปลงเป็น JPEG</small>
+            </label>
+          </div>
+          <div id="imagePdfPreview" class="image-pdf-preview" aria-live="polite"></div>
+          <div class="pdf-watermark-note">
+            <strong>ข้อควรรู้:</strong> PDF ที่สร้างจากภาพจะไม่มี searchable text/OCR โดยอัตโนมัติ และระบบจะสร้างไฟล์ใหม่โดยไม่แก้ภาพต้นฉบับ
+          </div>
+        </section>
+
+
+        <section id="pdfScanCleanupOptions" class="options-panel pdf-scan-cleanup-panel hidden" aria-labelledby="pdfScanCleanupTitle">
+          <div class="panel-heading">
+            <div>
+              <h3 id="pdfScanCleanupTitle">PDF Scan Cleanup</h3>
+              <small>เหมาะกับเอกสารสแกน/ถ่ายเอกสาร ระบบจะ Rasterize หน้าใหม่เพื่อปรับภาพและลดขนาด โดยไฟล์ต้นฉบับไม่ถูกแก้ไข</small>
+            </div>
+            <span class="local-badge">100% LOCAL</span>
+          </div>
+          <div class="pdf-scan-cleanup-grid">
+            <label class="field-group">
+              <span>Cleanup profile</span>
+              <select id="pdfScanProfile">
+                <option value="balanced" selected>Balanced — 120 DPI / JPEG 78%</option>
+                <option value="quality">High quality — 150 DPI / JPEG 86%</option>
+                <option value="small">Small file — 96 DPI / JPEG 65%</option>
+              </select>
+            </label>
+            <label class="field-group">
+              <span>Contrast</span>
+              <input id="pdfScanContrast" type="range" min="0.8" max="1.8" step="0.1" value="1.2" />
+              <small id="pdfScanContrastValue">120%</small>
+            </label>
+            <label class="field-group">
+              <span>Page limit safety</span>
+              <input id="pdfScanMaxPages" type="number" min="1" max="500" step="1" value="200" />
+              <small>ป้องกัน Browser ใช้หน่วยความจำมากเกินไป</small>
+            </label>
+          </div>
+          <div class="option-check-grid">
+            <label class="check-row compact"><input id="pdfScanGrayscale" type="checkbox" checked /><span><strong>Grayscale</strong><small>ลดสีรบกวนและเหมาะกับเอกสารข้อความ</small></span></label>
+            <label class="check-row compact"><input id="pdfScanRemoveBlank" type="checkbox" /><span><strong>Remove detected blank pages</strong><small>ลบเฉพาะหน้าที่ระบบตรวจว่าเกือบว่าง — ปิดไว้เป็นค่าเริ่มต้นเพื่อความปลอดภัย</small></span></label>
+            <label class="check-row compact"><input id="pdfScanRemoveDuplicates" type="checkbox" /><span><strong>Remove consecutive duplicate pages</strong><small>ตรวจเฉพาะหน้าซ้ำที่อยู่ติดกันเพื่อลด false positive</small></span></label>
+          </div>
+          <button id="pdfScanAnalyze" type="button" class="secondary-button">Analyze scan pages</button>
+          <div id="pdfScanAnalysis" class="scan-analysis hidden" aria-live="polite"></div>
+          <div class="pdf-compress-note">
+            <strong>ข้อควรรู้:</strong> Cleanup จะเปลี่ยนแต่ละหน้าเป็นภาพใหม่ ดังนั้น searchable text, vector และ Digital Signature เดิมอาจหาย/ใช้ไม่ได้ หากต้องการเพียงลดขนาดโดยคง text ให้ใช้ Reduce PDF Size → Safe Optimize
+          </div>
+        </section>
+
+        <section id="batchRenameOptions" class="options-panel batch-rename-panel hidden" aria-labelledby="batchRenameTitle">
+          <div class="panel-heading">
+            <div>
+              <h3 id="batchRenameTitle">Batch Rename</h3>
+              <small>ไฟล์ต้นฉบับจะไม่ถูกเปลี่ยนชื่อ ระบบสร้าง ZIP ใหม่พร้อม Rename Log เท่านั้น</small>
+            </div>
+            <span class="local-badge">100% LOCAL</span>
+          </div>
+          <div class="batch-rename-grid">
+            <label class="field-group"><span>Prefix</span><input id="batchPrefix" type="text" maxlength="60" placeholder="เช่น AR" spellcheck="false" /></label>
+            <label class="field-group"><span>Suffix</span><input id="batchSuffix" type="text" maxlength="60" placeholder="เช่น FINAL" spellcheck="false" /></label>
+            <label class="field-group"><span>Find</span><input id="batchFind" type="text" maxlength="80" placeholder="ข้อความเดิม" spellcheck="false" /></label>
+            <label class="field-group"><span>Replace with</span><input id="batchReplace" type="text" maxlength="80" placeholder="ข้อความใหม่" spellcheck="false" /></label>
+            <label class="field-group"><span>Separator</span><select id="batchSeparator"><option value="_" selected>Underscore _</option><option value="-">Hyphen -</option><option value=" ">Space</option><option value="">None</option></select></label>
+            <label class="field-group"><span>Date</span><input id="batchDate" type="date" /></label>
+            <label class="field-group"><span>Running start</span><input id="batchRunningStart" type="number" min="0" max="999999" step="1" value="1" /></label>
+            <label class="field-group"><span>Running digits</span><input id="batchRunningDigits" type="number" min="1" max="10" step="1" value="3" /></label>
+          </div>
+          <div class="option-check-grid">
+            <label class="check-row compact"><input id="batchUseDate" type="checkbox" /><span><strong>Add date</strong><small>เพิ่มวันที่รูปแบบ YYYYMMDD ก่อนชื่อไฟล์</small></span></label>
+            <label class="check-row compact"><input id="batchUseRunning" type="checkbox" /><span><strong>Add running number</strong><small>เช่น 001, 002, 003 ตามลำดับไฟล์</small></span></label>
+            <label class="check-row compact"><input id="batchClean" type="checkbox" checked /><span><strong>Clean filename</strong><small>ลบอักขระที่ Windows ไม่รองรับและจัดช่องว่าง</small></span></label>
+            <label class="check-row compact"><input id="batchKeepExtension" type="checkbox" checked /><span><strong>Keep extension</strong><small>คง .pdf / .xlsx / .jpg และนามสกุลเดิม</small></span></label>
+          </div>
+          <div class="batch-preview-head"><strong>Rename Preview</strong><span id="batchRenameSummary">0 files</span></div>
+          <div class="batch-preview-wrap">
+            <table class="batch-preview-table"><thead><tr><th>#</th><th>Original</th><th>New filename</th><th>Status</th></tr></thead><tbody id="batchRenamePreview"></tbody></table>
+          </div>
+          <div id="batchRenameWarning" class="pdf-compress-note hidden"></div>
+        </section>
+
         <section id="analysisPanel" class="analysis-panel hidden" aria-labelledby="analysisTitle">
           <div class="analysis-head">
             <div>
@@ -556,12 +797,27 @@
             <strong>PDF Page Tools</strong>
             <p>จัดลำดับ หมุน ลบ ทำสำเนา Extract หรือ Split หน้า PDF โดย Preview ก่อน Export และไม่แก้ไฟล์ต้นฉบับ</p>
           </article>
+          <article>
+            <span class="note-type pdf">PDF · SCAN</span>
+            <strong>PDF Scan Cleanup</strong>
+            <p>ปรับ grayscale/contrast พร้อมตรวจหน้าว่างและหน้าซ้ำติดกันก่อนสร้าง scanned PDF ใหม่ โดยประมวลผลบนเครื่อง</p>
+          </article>
+          <article>
+            <span class="note-type pdf">PDF · STAMP</span>
+            <strong>PDF Watermark & Stamp</strong>
+            <p>ใส่ DRAFT, CONFIDENTIAL, INTERNAL USE, Custom text, Page number หรือ Filename พร้อมกำหนดตำแหน่ง ความโปร่งใส และช่วงหน้า</p>
+          </article>
+          <article>
+            <span class="note-type convert">FILE · RENAME</span>
+            <strong>Batch Rename</strong>
+            <p>Preview ชื่อใหม่ก่อนสร้าง ZIP พร้อมตรวจชื่อซ้ำและสร้าง Rename Log โดยไม่แก้ไขไฟล์ต้นฉบับ</p>
+          </article>
         </div>
         <p class="privacy-note">ไฟล์ถูกประมวลผลบนเครื่องของคุณ ไม่ได้อัปโหลดไปยังเซิร์ฟเวอร์</p>
         <p class="limitation-note">Excel: Chart, รูปภาพ, Macro และฟีเจอร์ขั้นสูงบางอย่างอาจไม่ถูกเก็บไว้ · PDF: ไม่รองรับไฟล์ที่เข้ารหัสหรือมีรหัสผ่าน และลายเซ็นดิจิทัลอาจใช้ไม่ได้หลังแก้ไข</p>
       </section>
     </main>
 
-    <footer>Office Toolkit v4.1.0 · Local-first · ไฟล์ประมวลผลบนอุปกรณ์ของผู้ใช้</footer>
+    <footer>Office Toolkit v4.5.0 · Local-first · ไฟล์ประมวลผลบนอุปกรณ์ของผู้ใช้</footer>
   </body>
 </html>

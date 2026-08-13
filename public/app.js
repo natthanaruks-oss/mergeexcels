@@ -3,6 +3,7 @@
 
   const EXCEL_ACCEPT = ".xlsx,.xls,.xlsm,.xlsb";
   const PDF_ACCEPT = ".pdf";
+  const IMAGE_ACCEPT = ".jpg,.jpeg,.png,.webp";
 
   const MODES = {
     mergeExcel: {
@@ -164,6 +165,60 @@
       dropHint: "หลังเลือกไฟล์ ระบบจะแสดง Preview ทุกหน้าเพื่อจัดลำดับและแก้ไข",
       unitLabel: "หน้า",
     },
+    pdfWatermark: {
+      kind: "pdf",
+      eyebrow: "PDF WATERMARK & STAMP",
+      title: "ใส่ Watermark / Stamp ลงใน PDF",
+      description: "DRAFT · CONFIDENTIAL · INTERNAL USE · Custom text · Page number · Filename พร้อมกำหนดตำแหน่ง ความโปร่งใส และช่วงหน้า",
+      button: "สร้าง PDF พร้อม Stamp",
+      output: "stamped.pdf",
+      extension: "pdf",
+      multiple: false,
+      dropTitle: "เลือก PDF 1 ไฟล์ที่ต้องการใส่ Stamp",
+      dropHint: "ระบบจะแสดง Preview ทุกหน้าและตำแหน่ง Stamp โดยประมาณก่อน Export",
+      unitLabel: "หน้า",
+    },
+    imageToPdf: {
+      kind: "image",
+      eyebrow: "IMAGE TO PDF",
+      title: "รวมรูปภาพหลายไฟล์เป็น PDF",
+      description: "รองรับ JPG · PNG · WebP พร้อมจัดลำดับ กำหนด A4 Fit / Original Size, Orientation, Margin และ Quality",
+      button: "สร้าง PDF จากรูปภาพ",
+      output: "images_to_pdf.pdf",
+      extension: "pdf",
+      multiple: true,
+      dropTitle: "ลาก JPG / PNG / WebP มาวาง หรือคลิกเพื่อเลือกภาพ",
+      dropHint: "เลือกได้หลายภาพ · จัดลำดับด้วย ▲▼ หรือ Drag & Drop ก่อน Export",
+      unitLabel: "ภาพ",
+    },
+    pdfScanCleanup: {
+      kind: "pdf",
+      eyebrow: "PDF SCAN CLEANUP",
+      title: "ทำความสะอาด PDF สแกน",
+      description: "ปรับ Grayscale/Contrast ตรวจหน้าว่างและหน้าซ้ำติดกัน พร้อม Recompress เป็น PDF ใหม่ — Local 100%",
+      button: "สร้าง Clean Scan PDF",
+      output: "clean_scan.pdf",
+      extension: "pdf",
+      multiple: false,
+      dropTitle: "เลือก PDF สแกน 1 ไฟล์",
+      dropHint: "เหมาะกับเอกสารสแกน/ถ่ายเอกสาร · Analyze ก่อนลบหน้าว่างหรือหน้าซ้ำ",
+      unitLabel: "หน้า",
+    },
+    batchRename: {
+      kind: "file",
+      eyebrow: "BATCH RENAME",
+      title: "เปลี่ยนชื่อหลายไฟล์พร้อมกัน",
+      description: "Preview ชื่อใหม่ ตรวจชื่อซ้ำ แล้วสร้าง ZIP พร้อม Rename Log โดยไม่แก้ไขไฟล์ต้นฉบับ",
+      button: "สร้าง ZIP พร้อมชื่อใหม่",
+      output: "renamed_files.zip",
+      extension: "zip",
+      multiple: true,
+      deferParse: true,
+      dropTitle: "ลากไฟล์ที่ต้องการเปลี่ยนชื่อมาวาง หรือคลิกเพื่อเลือกไฟล์",
+      dropHint: "รองรับไฟล์ทุกประเภท · Preview ก่อนสร้าง ZIP · ไฟล์ต้นฉบับไม่ถูกแก้ไข",
+      unitLabel: "ไฟล์",
+    },
+
   };
 
   const state = {
@@ -180,6 +235,8 @@
     thumbCache: new Map(),
     optimizeAnalysis: null,
     optimizeAnalysisError: "",
+    scanAnalysis: null,
+    batchRenamePlan: [],
     optimizeReport: null,
     optimizeWorker: null,
     optimizeReject: null,
@@ -241,6 +298,53 @@
     pdfSelectAll: document.getElementById("pdfSelectAll"),
     pdfClearSelection: document.getElementById("pdfClearSelection"),
     pdfAddBlank: document.getElementById("pdfAddBlank"),
+    pdfWatermarkOptions: document.getElementById("pdfWatermarkOptions"),
+    pdfWatermarkPreset: document.getElementById("pdfWatermarkPreset"),
+    pdfWatermarkText: document.getElementById("pdfWatermarkText"),
+    pdfWatermarkPosition: document.getElementById("pdfWatermarkPosition"),
+    pdfWatermarkFontSize: document.getElementById("pdfWatermarkFontSize"),
+    pdfWatermarkOpacity: document.getElementById("pdfWatermarkOpacity"),
+    pdfWatermarkOpacityValue: document.getElementById("pdfWatermarkOpacityValue"),
+    pdfWatermarkRotation: document.getElementById("pdfWatermarkRotation"),
+    pdfWatermarkRangeMode: document.getElementById("pdfWatermarkRangeMode"),
+    pdfWatermarkCustomRangeField: document.getElementById("pdfWatermarkCustomRangeField"),
+    pdfWatermarkCustomRange: document.getElementById("pdfWatermarkCustomRange"),
+    pdfWatermarkPageNumber: document.getElementById("pdfWatermarkPageNumber"),
+    pdfWatermarkFilename: document.getElementById("pdfWatermarkFilename"),
+    imageToPdfOptions: document.getElementById("imageToPdfOptions"),
+    imagePdfPageSize: document.getElementById("imagePdfPageSize"),
+    imagePdfOrientation: document.getElementById("imagePdfOrientation"),
+    imagePdfMargin: document.getElementById("imagePdfMargin"),
+    imagePdfQuality: document.getElementById("imagePdfQuality"),
+    imagePdfPreview: document.getElementById("imagePdfPreview"),
+    pdfScanCleanupOptions: document.getElementById("pdfScanCleanupOptions"),
+    pdfScanProfile: document.getElementById("pdfScanProfile"),
+    pdfScanContrast: document.getElementById("pdfScanContrast"),
+    pdfScanContrastValue: document.getElementById("pdfScanContrastValue"),
+    pdfScanMaxPages: document.getElementById("pdfScanMaxPages"),
+    pdfScanGrayscale: document.getElementById("pdfScanGrayscale"),
+    pdfScanRemoveBlank: document.getElementById("pdfScanRemoveBlank"),
+    pdfScanRemoveDuplicates: document.getElementById("pdfScanRemoveDuplicates"),
+    pdfScanAnalyze: document.getElementById("pdfScanAnalyze"),
+    pdfScanAnalysis: document.getElementById("pdfScanAnalysis"),
+    batchRenameOptions: document.getElementById("batchRenameOptions"),
+    batchPrefix: document.getElementById("batchPrefix"),
+    batchSuffix: document.getElementById("batchSuffix"),
+    batchFind: document.getElementById("batchFind"),
+    batchReplace: document.getElementById("batchReplace"),
+    batchSeparator: document.getElementById("batchSeparator"),
+    batchDate: document.getElementById("batchDate"),
+    batchUseDate: document.getElementById("batchUseDate"),
+    batchUseRunning: document.getElementById("batchUseRunning"),
+    batchRunningStart: document.getElementById("batchRunningStart"),
+    batchRunningDigits: document.getElementById("batchRunningDigits"),
+    batchClean: document.getElementById("batchClean"),
+    batchKeepExtension: document.getElementById("batchKeepExtension"),
+    batchRenamePreview: document.getElementById("batchRenamePreview"),
+    batchRenameSummary: document.getElementById("batchRenameSummary"),
+    batchRenameWarning: document.getElementById("batchRenameWarning"),
+    pageGridTitle: document.getElementById("pageGridTitle"),
+    pageGridHint: document.getElementById("pageGridHint"),
     budgetAgency: document.getElementById("budgetAgency"),
     budgetSourceSheet: document.getElementById("budgetSourceSheet"),
     constructionPercent: document.getElementById("constructionPercent"),
@@ -435,7 +539,7 @@
     if (!state.oracleArBuffer) return Promise.reject(new Error("ไม่พบข้อมูลไฟล์ Oracle AR กรุณาเลือกไฟล์ใหม่"));
     terminateOracleArWorker();
     const jobId = state.oracleArJobId;
-    const worker = new Worker(`./oracle-ar-worker.js?v=4.1.0`);
+    const worker = new Worker(`./oracle-ar-worker.js?v=4.5.0`);
     state.oracleArWorker = worker;
 
     return new Promise((resolve, reject) => {
@@ -480,6 +584,8 @@
   async function analyzeOracleArFile(file) {
     state.busy = true;
     state.oracleArAnalysis = null;
+    state.scanAnalysis = null;
+    if (els.pdfScanAnalysis) { els.pdfScanAnalysis.classList.add("hidden"); els.pdfScanAnalysis.innerHTML = ""; }
     state.oracleArBuffer = await file.arrayBuffer();
     if (els.oracleArAnalysis) els.oracleArAnalysis.classList.add("hidden");
     els.cancelButton.classList.remove("hidden");
@@ -552,7 +658,7 @@
     if (policy.blocked) return Promise.reject(new Error(policy.message));
     terminateOptimizeWorker();
     const jobId = state.optimizeJobId;
-    const worker = new Worker(`./optimize-worker.js?v=4.1.0`);
+    const worker = new Worker(`./optimize-worker.js?v=4.5.0`);
     state.optimizeWorker = worker;
 
     return new Promise(async (resolve, reject) => {
@@ -942,7 +1048,7 @@
     els.processButton.textContent = config.button;
     els.outputName.value = config.output;
     els.fileInput.multiple = config.multiple;
-    els.fileInput.accept = config.kind === "pdf" ? PDF_ACCEPT : EXCEL_ACCEPT;
+    els.fileInput.accept = config.kind === "pdf" ? PDF_ACCEPT : config.kind === "image" ? IMAGE_ACCEPT : config.kind === "file" ? "" : EXCEL_ACCEPT;
     els.dropTitle.textContent = config.dropTitle;
     els.dropHint.textContent = config.dropHint;
     els.unitLabel.textContent = config.unitLabel;
@@ -952,6 +1058,10 @@
     els.oracleArOptions.classList.toggle("hidden", mode !== "oracleArCleaner");
     els.pdfCompressOptions.classList.toggle("hidden", mode !== "compressPdf");
     els.pdfPageToolsOptions.classList.toggle("hidden", mode !== "pdfPageTools");
+    if (els.pdfWatermarkOptions) els.pdfWatermarkOptions.classList.toggle("hidden", mode !== "pdfWatermark");
+    if (els.imageToPdfOptions) els.imageToPdfOptions.classList.toggle("hidden", mode !== "imageToPdf");
+    if (els.pdfScanCleanupOptions) els.pdfScanCleanupOptions.classList.toggle("hidden", mode !== "pdfScanCleanup");
+    if (els.batchRenameOptions) els.batchRenameOptions.classList.toggle("hidden", mode !== "batchRename");
     if (mode === "budgetBuilder") populateBudgetWorkTypes();
     const usesPageRange = mode === "pdf2excel" || mode === "ocr2excel";
     document.body.classList.toggle("pdf-mode", config.kind === "pdf" && !usesPageRange);
@@ -959,6 +1069,9 @@
     if (!usesPageRange) { els.pageStart.value = ""; els.pageEnd.value = ""; }
     updateOptimizeOptionState();
     updatePdfPageToolsOptions();
+    updatePdfWatermarkOptions();
+    updatePdfScanOptions();
+    updateBatchRenamePreview();
 
     resetFiles();
   }
@@ -990,6 +1103,10 @@
     state.budgetPreviewPage = 1;
     state.oracleArBuffer = null;
     state.oracleArAnalysis = null;
+    state.batchRenamePlan = [];
+    if (els.batchRenamePreview) els.batchRenamePreview.innerHTML = "";
+    if (els.batchRenameSummary) els.batchRenameSummary.textContent = "0 files";
+    if (els.batchRenameWarning) { els.batchRenameWarning.classList.add("hidden"); els.batchRenameWarning.textContent = ""; }
     if (els.budgetPreviewPanel) els.budgetPreviewPanel.classList.add("hidden");
     if (els.oracleArAnalysis) els.oracleArAnalysis.classList.add("hidden");
     clearPdfState();
@@ -1014,11 +1131,17 @@
 
   function validateSelection(files) {
     const config = currentConfig();
-    const supported = config.kind === "pdf" ? /\.pdf$/i : /\.(xlsx|xls|xlsm|xlsb)$/i;
-    const valid = files.filter((file) => supported.test(file.name));
+    const supported = config.kind === "pdf" ? /\.pdf$/i
+      : config.kind === "image" ? /\.(jpe?g|png|webp)$/i
+        : config.kind === "file" ? /.+/
+          : /\.(xlsx|xls|xlsm|xlsb)$/i;
+    const valid = files.filter((file) => file && file.name && supported.test(file.name));
 
     if (!valid.length) {
-      throw new Error(config.kind === "pdf" ? "กรุณาเลือกไฟล์ PDF" : "กรุณาเลือกไฟล์ Excel ที่รองรับ");
+      throw new Error(config.kind === "pdf" ? "กรุณาเลือกไฟล์ PDF"
+        : config.kind === "image" ? "กรุณาเลือกไฟล์ JPG, PNG หรือ WebP"
+          : config.kind === "file" ? "กรุณาเลือกไฟล์อย่างน้อย 1 ไฟล์"
+            : "กรุณาเลือกไฟล์ Excel ที่รองรับ");
     }
     if (!config.multiple && valid.length !== 1) {
       if (state.mode === "optimizeExcel") throw new Error("Optimize Excel รองรับครั้งละ 1 ไฟล์เท่านั้น");
@@ -1026,6 +1149,8 @@
       if (state.mode === "oracleArCleaner") throw new Error("Oracle AR Statement Cleaner รองรับครั้งละ 1 ไฟล์เท่านั้น");
       if (state.mode === "compressPdf") throw new Error("Compress PDF รองรับครั้งละ 1 ไฟล์เท่านั้น");
       if (state.mode === "pdfPageTools") throw new Error("PDF Page Tools รองรับครั้งละ 1 ไฟล์เท่านั้น");
+      if (state.mode === "pdfWatermark") throw new Error("PDF Watermark & Stamp รองรับครั้งละ 1 ไฟล์เท่านั้น");
+      if (state.mode === "pdfScanCleanup") throw new Error("PDF Scan Cleanup รองรับครั้งละ 1 ไฟล์เท่านั้น");
       throw new Error(config.kind === "pdf" ? "Split PDF รองรับครั้งละ 1 ไฟล์เท่านั้น" : "Split File รองรับครั้งละ 1 ไฟล์เท่านั้น");
     }
     return valid;
@@ -1083,12 +1208,32 @@
     return parsed;
   }
 
+  async function parseImageFiles(files) {
+    const parsed = [];
+    for (let index = 0; index < files.length; index += 1) {
+      const file = files[index];
+      let bitmap;
+      try {
+        bitmap = await createImageBitmap(file);
+      } catch (error) {
+        throw new Error(`ไม่สามารถอ่านรูปภาพ: ${file.name}`);
+      }
+      const width = bitmap.width;
+      const height = bitmap.height;
+      bitmap.close();
+      parsed.push({ uid: ++state.fileUid, name: file.name, file, unitCount: 1, width, height });
+      setStatus(`อ่านภาพ ${index + 1}/${files.length}: ${file.name}`, "working", 10 + ((index + 1) / files.length) * 45);
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    }
+    return parsed;
+  }
+
   async function parseFiles(files) {
     setStatus("กำลังอ่านไฟล์...", "working", 5);
     if (currentConfig().deferParse) {
       return files.map((file) => ({ name: file.name, file, unitCount: 0 }));
     }
-    return currentConfig().kind === "pdf" ? parsePdfFiles(files) : parseExcelFiles(files);
+    return currentConfig().kind === "pdf" ? parsePdfFiles(files) : currentConfig().kind === "image" ? parseImageFiles(files) : parseExcelFiles(files);
   }
 
   async function addFiles(fileList) {
@@ -1103,7 +1248,7 @@
       state.optimizeAnalysisError = "";
       state.optimizeReport = null;
       clearPdfState();
-      if (state.mode === "mergePdf" || state.mode === "pdfPageTools") buildPdfPages();
+      if (state.mode === "mergePdf" || state.mode === "pdfPageTools" || state.mode === "pdfWatermark") buildPdfPages();
       renderFiles();
 
       if (state.mode === "optimizeExcel") {
@@ -1121,9 +1266,22 @@
       } else if (state.mode === "compressPdf") {
         els.outputName.value = `${PdfOps.basename(files[0].name)}_compressed.pdf`;
         setStatus("อ่าน PDF เรียบร้อย พร้อมลดขนาด", "success", 0);
+      } else if (state.mode === "pdfScanCleanup") {
+        els.outputName.value = `${PdfOps.basename(files[0].name)}_clean_scan.pdf`;
+        state.scanAnalysis = null;
+        if (els.pdfScanAnalysis) { els.pdfScanAnalysis.classList.add("hidden"); els.pdfScanAnalysis.innerHTML = ""; }
+        setStatus("อ่าน PDF เรียบร้อย · กด Analyze scan pages ก่อนหากต้องการตรวจหน้าว่าง/หน้าซ้ำ", "success", 0);
       } else if (state.mode === "pdfPageTools") {
         els.outputName.value = `${PdfOps.basename(files[0].name)}_edited.pdf`;
         setStatus(`อ่าน PDF เรียบร้อย ${state.pages.length} หน้า · พร้อมจัดหน้า`, "success", 0);
+      } else if (state.mode === "imageToPdf") {
+        els.outputName.value = "images_to_pdf.pdf";
+        renderImagePdfPreview();
+        setStatus(`อ่านรูปภาพเรียบร้อย ${state.parsed.length} ภาพ · พร้อมสร้าง PDF`, "success", 0);
+      } else if (state.mode === "batchRename") {
+        els.outputName.value = "renamed_files.zip";
+        updateBatchRenamePreview();
+        setStatus(`เลือกแล้ว ${state.parsed.length} ไฟล์ · ตรวจ Rename Preview ก่อนสร้าง ZIP`, "success", 0);
       } else {
         setStatus("อ่านไฟล์เรียบร้อย พร้อมประมวลผล", "success", 0);
       }
@@ -1163,7 +1321,7 @@
   function renderFiles() {
     const config = currentConfig();
     const sourceUnits = state.parsed.reduce((sum, item) => sum + (item.unitCount || 0), 0);
-    const totalUnits = state.mode === "pdfPageTools" && state.pages.length ? state.pages.length : sourceUnits;
+    const totalUnits = state.mode === "pdfPageTools" && state.pages.length ? state.pages.length : state.mode === "batchRename" ? state.files.length : sourceUnits;
     const totalBytes = state.files.reduce((sum, file) => sum + file.size, 0);
     els.fileCount.textContent = String(state.files.length);
     els.unitCount.textContent = String(totalUnits);
@@ -1203,9 +1361,11 @@
       els.fileList.appendChild(row);
     });
     renderPageGrid();
+    if (state.mode === "imageToPdf") renderImagePdfPreview();
+    if (state.mode === "batchRename") updateBatchRenamePreview();
 
     let ready;
-    if (state.mode === "mergePdf" || state.mode === "pdfPageTools") {
+    if (state.mode === "mergePdf" || state.mode === "pdfPageTools" || state.mode === "pdfWatermark") {
       ready = state.pages.length >= 1;
     } else if (state.mode === "optimizeExcel") {
       ready = state.parsed.length === 1 && !!state.optimizeAnalysis;
@@ -1243,8 +1403,9 @@
   }
 
   function renderPageGrid() {
-    const isPageEditor = (state.mode === "mergePdf" || state.mode === "pdfPageTools") && state.pages.length > 0;
+    const isPageEditor = (state.mode === "mergePdf" || state.mode === "pdfPageTools" || state.mode === "pdfWatermark") && state.pages.length > 0;
     const pageToolsMode = state.mode === "pdfPageTools";
+    const watermarkMode = state.mode === "pdfWatermark";
     els.pageGrid.classList.toggle("hidden", !isPageEditor);
     if (!isPageEditor) {
       els.pageGridList.innerHTML = "";
@@ -1252,13 +1413,15 @@
     }
 
     els.pageGridCount.textContent = `${state.pages.length} หน้า${pageToolsMode && state.pageSelection.size ? ` · เลือก ${state.pageSelection.size}` : ""}`;
+    if (els.pageGridTitle) els.pageGridTitle.textContent = watermarkMode ? "Preview Watermark / Stamp" : "พรีวิวและจัดลำดับหน้า";
+    if (els.pageGridHint) els.pageGridHint.textContent = watermarkMode ? "Preview แสดงตำแหน่งโดยประมาณ · PDF จริงจะคำนวณตำแหน่งจากขนาดหน้าต้นฉบับ" : "ลากการ์ด หรือกดปุ่ม ‹ › เพื่อสลับลำดับ · กด × เพื่อลบหน้า";
     els.pageGridList.innerHTML = "";
     const lastIndex = state.pages.length - 1;
 
     state.pages.forEach((page, index) => {
       const card = document.createElement("div");
       card.className = `page-card${state.pageSelection.has(page.id) ? " selected" : ""}`;
-      card.draggable = !state.busy;
+      card.draggable = !state.busy && !watermarkMode;
       card.dataset.id = page.id;
 
       let thumb;
@@ -1284,20 +1447,22 @@
            <button class="page-rotate-right" type="button" data-id="${page.id}" aria-label="หมุนขวา">↷</button>
            <button class="page-duplicate" type="button" data-id="${page.id}" aria-label="ทำสำเนาหน้านี้">⧉</button>`
         : "";
+      const watermarkOverlay = watermarkMode ? watermarkPreviewMarkup(index, state.pages.length) : "";
+      const pageActions = watermarkMode ? "" : `<div class="page-actions ${pageToolsMode ? "page-tools-actions" : ""}">
+          <button class="page-prev" type="button" data-id="${page.id}" ${index === 0 ? "disabled" : ""} aria-label="เลื่อนซ้าย">‹</button>
+          <button class="page-next" type="button" data-id="${page.id}" ${index === lastIndex ? "disabled" : ""} aria-label="เลื่อนขวา">›</button>
+          ${toolActions}
+          <button class="page-remove" type="button" data-id="${page.id}" aria-label="ลบหน้านี้">×</button>
+        </div>`;
 
       card.innerHTML = `
-        <div class="page-thumb-wrap" style="--page-rotation:${rotate}deg">${thumb}</div>
+        <div class="page-thumb-wrap" style="--page-rotation:${rotate}deg">${thumb}${watermarkOverlay}</div>
         <div class="page-bar">
           <span class="page-pos">${index + 1}</span>
           <span class="page-label" title="${label.replaceAll('"', '&quot;')}">${label}${rotate ? ` · ${PdfOps.normalizeRotation(rotate)}°` : ""}</span>
         </div>
         ${selectionControl}
-        <div class="page-actions ${pageToolsMode ? "page-tools-actions" : ""}">
-          <button class="page-prev" type="button" data-id="${page.id}" ${index === 0 ? "disabled" : ""} aria-label="เลื่อนซ้าย">‹</button>
-          <button class="page-next" type="button" data-id="${page.id}" ${index === lastIndex ? "disabled" : ""} aria-label="เลื่อนขวา">›</button>
-          ${toolActions}
-          <button class="page-remove" type="button" data-id="${page.id}" aria-label="ลบหน้านี้">×</button>
-        </div>
+        ${pageActions}
       `;
       els.pageGridList.appendChild(card);
     });
@@ -1441,8 +1606,9 @@
     const removed = state.parsed[index];
     state.files.splice(index, 1);
     state.parsed.splice(index, 1);
-    if (state.mode === "mergePdf" && removed) {
+    if ((state.mode === "mergePdf" || state.mode === "pdfPageTools" || state.mode === "pdfWatermark") && removed) {
       state.pages = state.pages.filter((p) => p.ref !== removed);
+      state.pageSelection.clear();
       state.renderToken += 1;
     }
     if (state.mode === "optimizeExcel") {
@@ -1845,6 +2011,79 @@
     return `${outputName} เรียบร้อย · ${modeText} · ${formatBytes(originalBytes.length)} → ${formatBytes(finalBytes.length)} (${reduction >= 0 ? "ลด" : "เพิ่ม"} ${Math.abs(reduction).toFixed(1)}%)`;
   }
 
+  function getPdfWatermarkPageIndices(pageCount) {
+    const mode = els.pdfWatermarkRangeMode ? els.pdfWatermarkRangeMode.value : "all";
+    if (mode === "first") return [0];
+    if (mode === "last") return [Math.max(0, pageCount - 1)];
+    if (mode === "custom") return PdfOps.parsePageRange(els.pdfWatermarkCustomRange ? els.pdfWatermarkCustomRange.value : "", pageCount);
+    return Array.from({ length: pageCount }, (_, index) => index);
+  }
+
+  function getPdfWatermarkOptions() {
+    const ref = state.parsed[0];
+    const pageCount = state.pages.length || (ref && ref.unitCount) || 0;
+    return {
+      text: els.pdfWatermarkText ? els.pdfWatermarkText.value.trim() : "",
+      position: els.pdfWatermarkPosition ? els.pdfWatermarkPosition.value : "center",
+      fontSize: Number(els.pdfWatermarkFontSize && els.pdfWatermarkFontSize.value) || 48,
+      opacity: Number(els.pdfWatermarkOpacity && els.pdfWatermarkOpacity.value) || 0.2,
+      rotation: Number(els.pdfWatermarkRotation && els.pdfWatermarkRotation.value) || 0,
+      pageIndices: getPdfWatermarkPageIndices(pageCount),
+      addPageNumber: !!(els.pdfWatermarkPageNumber && els.pdfWatermarkPageNumber.checked),
+      addFilename: !!(els.pdfWatermarkFilename && els.pdfWatermarkFilename.checked),
+      filename: ref ? ref.name : "",
+    };
+  }
+
+  function watermarkPreviewMarkup(index, pageCount) {
+    if (state.mode !== "pdfWatermark") return "";
+    let options;
+    try { options = getPdfWatermarkOptions(); } catch (error) { options = { pageIndices: [] }; }
+    if (!options.pageIndices.includes(index)) return "";
+    const text = escapeHtml(options.text || "");
+    const position = escapeHtml(options.position || "center");
+    const rotation = Number(options.rotation) || 0;
+    const opacity = Math.max(0.08, Math.min(1, Number(options.opacity) || 0.2));
+    const extras = [
+      options.addFilename ? "Filename" : "",
+      options.addPageNumber ? `Page ${index + 1}/${pageCount}` : "",
+    ].filter(Boolean).join(" · ");
+    return `<div class="watermark-preview watermark-pos-${position}" style="--wm-opacity:${opacity};--wm-rotation:${rotation}deg"><strong>${text}</strong>${extras ? `<small>${escapeHtml(extras)}</small>` : ""}</div>`;
+  }
+
+  function updatePdfWatermarkOptions() {
+    if (!els.pdfWatermarkOptions) return;
+    const preset = els.pdfWatermarkPreset ? els.pdfWatermarkPreset.value : "draft";
+    const presets = { draft: "DRAFT", confidential: "CONFIDENTIAL", internal: "INTERNAL USE" };
+    if (preset !== "custom" && els.pdfWatermarkText) els.pdfWatermarkText.value = presets[preset] || "DRAFT";
+    if (els.pdfWatermarkText) els.pdfWatermarkText.readOnly = preset !== "custom";
+    if (els.pdfWatermarkCustomRangeField && els.pdfWatermarkRangeMode) {
+      els.pdfWatermarkCustomRangeField.classList.toggle("hidden", els.pdfWatermarkRangeMode.value !== "custom");
+    }
+    if (els.pdfWatermarkOpacityValue && els.pdfWatermarkOpacity) {
+      els.pdfWatermarkOpacityValue.textContent = `${Math.round(Number(els.pdfWatermarkOpacity.value) * 100)}%`;
+    }
+    if (state.mode === "pdfWatermark" && state.pages.length) renderPageGrid();
+  }
+
+  async function processPdfWatermark() {
+    const ref = state.parsed[0];
+    if (!ref || !ref.bytes) throw new Error("กรุณาเลือก PDF ก่อน");
+    const options = getPdfWatermarkOptions();
+    if (!options.pageIndices.length) throw new Error("กรุณาระบุ Page range ที่ต้องการใส่ Stamp");
+    if (!options.text && !options.addPageNumber && !options.addFilename) throw new Error("กรุณาเลือก Stamp text, Page number หรือ Filename อย่างน้อย 1 รายการ");
+    setStatus(`กำลังใส่ Stamp ${options.pageIndices.length} หน้า...`, "working", 45);
+    const bytes = await PdfOps.applyPdfWatermark(PDFLib, ref.bytes, {
+      ...options,
+      onProgress(done, total) {
+        setStatus(`กำลังประมวลผลหน้า ${done}/${total}`, "working", 45 + (done / total) * 50);
+      },
+    });
+    const outputName = ensureExtension(els.outputName.value || `${PdfOps.basename(ref.name)}_stamped.pdf`, "pdf");
+    downloadBlob(new Blob([bytes], { type: "application/pdf" }), outputName);
+    return `${outputName} เรียบร้อย · ใส่ Stamp ${options.pageIndices.length}/${state.pages.length} หน้า`;
+  }
+
   async function processPdfPageTools() {
     if (!state.pages.length) throw new Error("ไม่เหลือหน้า PDF สำหรับ Export");
     const action = els.pdfPageToolsAction ? els.pdfPageToolsAction.value : "edited";
@@ -1931,9 +2170,307 @@
     return `สร้าง ${outputName} เรียบร้อย · ${integrityText}${reduction}`;
   }
 
+  function getImagePdfOptions() {
+    return {
+      pageSize: els.imagePdfPageSize ? els.imagePdfPageSize.value : "a4",
+      orientation: els.imagePdfOrientation ? els.imagePdfOrientation.value : "auto",
+      marginMm: Number(els.imagePdfMargin && els.imagePdfMargin.value) || 0,
+      quality: Math.max(0.5, Math.min(1, Number(els.imagePdfQuality && els.imagePdfQuality.value) || 0.82)),
+    };
+  }
+
+  function renderImagePdfPreview() {
+    if (!els.imagePdfPreview || state.mode !== "imageToPdf") return;
+    els.imagePdfPreview.innerHTML = "";
+    if (!state.parsed.length) {
+      els.imagePdfPreview.innerHTML = '<div class="image-pdf-empty">เลือกภาพเพื่อดู Preview ลำดับหน้า PDF</div>';
+      return;
+    }
+    state.parsed.forEach((item, index) => {
+      const url = URL.createObjectURL(item.file);
+      const card = document.createElement("div");
+      card.className = "image-pdf-preview-card";
+      card.innerHTML = `<span class="image-pdf-order">${index + 1}</span><img src="${url}" alt=""><div><strong>${escapeHtml(item.name)}</strong><small>${item.width} × ${item.height} px</small></div>`;
+      const img = card.querySelector("img");
+      img.addEventListener("load", () => URL.revokeObjectURL(url), { once: true });
+      img.addEventListener("error", () => URL.revokeObjectURL(url), { once: true });
+      els.imagePdfPreview.appendChild(card);
+    });
+  }
+
+  async function imageFileToJpegBytes(file, quality) {
+    const bitmap = await createImageBitmap(file);
+    try {
+      const canvas = document.createElement("canvas");
+      canvas.width = bitmap.width;
+      canvas.height = bitmap.height;
+      const ctx = canvas.getContext("2d", { alpha: false });
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(bitmap, 0, 0);
+      const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/jpeg", quality));
+      if (!blob) throw new Error(`ไม่สามารถแปลงรูปภาพ: ${file.name}`);
+      return { bytes: new Uint8Array(await blob.arrayBuffer()), width: bitmap.width, height: bitmap.height };
+    } finally {
+      bitmap.close();
+    }
+  }
+
+  async function processImageToPdf() {
+    if (!window.PDFLib || !PDFLib.PDFDocument) throw new Error("โหลด PDF library ไม่สำเร็จ กรุณารีเฟรชหน้าเว็บ");
+    if (!state.parsed.length) throw new Error("กรุณาเลือกภาพอย่างน้อย 1 ไฟล์");
+    const options = getImagePdfOptions();
+    const doc = await PDFLib.PDFDocument.create();
+    for (let index = 0; index < state.parsed.length; index += 1) {
+      const item = state.parsed[index];
+      setStatus(`กำลังสร้าง PDF จากภาพ ${index + 1}/${state.parsed.length}`, "working", 10 + ((index + 1) / state.parsed.length) * 80);
+      const raster = await imageFileToJpegBytes(item.file, options.quality);
+      const image = await doc.embedJpg(raster.bytes);
+      const layout = PdfOps.calculateImagePageLayout(raster.width, raster.height, options);
+      const page = doc.addPage([layout.pageWidth, layout.pageHeight]);
+      page.drawImage(image, { x: layout.x, y: layout.y, width: layout.drawWidth, height: layout.drawHeight });
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    }
+    const bytes = await doc.save({ useObjectStreams: true, addDefaultPage: false });
+    const outputName = ensureExtension(els.outputName.value || "images_to_pdf.pdf", "pdf");
+    downloadBlob(new Blob([bytes], { type: "application/pdf" }), outputName);
+    return `สร้าง ${outputName} จาก ${state.parsed.length} ภาพเรียบร้อย`;
+  }
+
+  function getPdfScanOptions() {
+    const profiles = {
+      balanced: { dpi: 120, quality: 0.78, label: "Balanced" },
+      quality: { dpi: 150, quality: 0.86, label: "High quality" },
+      small: { dpi: 96, quality: 0.65, label: "Small file" },
+    };
+    const profile = els.pdfScanProfile ? els.pdfScanProfile.value : "balanced";
+    return {
+      ...(profiles[profile] || profiles.balanced), profile,
+      contrast: Math.max(0.8, Math.min(1.8, Number(els.pdfScanContrast && els.pdfScanContrast.value) || 1.2)),
+      grayscale: !els.pdfScanGrayscale || els.pdfScanGrayscale.checked,
+      removeBlank: !!(els.pdfScanRemoveBlank && els.pdfScanRemoveBlank.checked),
+      removeDuplicates: !!(els.pdfScanRemoveDuplicates && els.pdfScanRemoveDuplicates.checked),
+      maxPages: Math.max(1, Math.min(500, Number(els.pdfScanMaxPages && els.pdfScanMaxPages.value) || 200)),
+    };
+  }
+
+  function updatePdfScanOptions() {
+    if (els.pdfScanContrastValue && els.pdfScanContrast) {
+      els.pdfScanContrastValue.textContent = `${Math.round(Number(els.pdfScanContrast.value) * 100)}%`;
+    }
+  }
+
+  function applyScanPixelCleanup(canvas, options) {
+    const ctx = canvas.getContext("2d", { willReadFrequently: true });
+    const image = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const data = image.data;
+    const contrast = options.contrast || 1;
+    for (let i = 0; i < data.length; i += 4) {
+      let r = data[i], g = data[i + 1], b = data[i + 2];
+      if (options.grayscale) {
+        const gray = (r * 0.299) + (g * 0.587) + (b * 0.114);
+        r = g = b = gray;
+      }
+      data[i] = Math.max(0, Math.min(255, ((r - 128) * contrast) + 128));
+      data[i + 1] = Math.max(0, Math.min(255, ((g - 128) * contrast) + 128));
+      data[i + 2] = Math.max(0, Math.min(255, ((b - 128) * contrast) + 128));
+    }
+    ctx.putImageData(image, 0, 0);
+  }
+
+  function scanCanvasMetrics(canvas) {
+    const sample = document.createElement("canvas");
+    sample.width = 32; sample.height = 32;
+    const ctx = sample.getContext("2d", { willReadFrequently: true });
+    ctx.drawImage(canvas, 0, 0, 32, 32);
+    const data = ctx.getImageData(0, 0, 32, 32).data;
+    let ink = 0;
+    const fingerprint = [];
+    for (let i = 0; i < data.length; i += 4) {
+      const lum = Math.round((data[i] * 0.299) + (data[i + 1] * 0.587) + (data[i + 2] * 0.114));
+      if (lum < 238) ink += 1;
+      fingerprint.push(Math.round(lum / 16));
+    }
+    return { inkRatio: ink / 1024, fingerprint };
+  }
+
+
+  async function renderScanPage(ref, pageIndex, dpi) {
+    const pdfjsDoc = await getPdfjsDoc(ref);
+    const page = await pdfjsDoc.getPage(pageIndex + 1);
+    const targetScale = Math.max(0.7, dpi / 72);
+    const base = page.getViewport({ scale: targetScale });
+    const maxPixels = 10000000;
+    const px = base.width * base.height;
+    const safeScale = px > maxPixels ? targetScale * Math.sqrt(maxPixels / px) : targetScale;
+    const viewport = page.getViewport({ scale: safeScale });
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.ceil(viewport.width));
+    canvas.height = Math.max(1, Math.ceil(viewport.height));
+    const ctx = canvas.getContext("2d", { alpha: false });
+    ctx.fillStyle = "#ffffff"; ctx.fillRect(0, 0, canvas.width, canvas.height);
+    await page.render({ canvasContext: ctx, viewport, background: "#ffffff" }).promise;
+    return canvas;
+  }
+
+  async function analyzePdfScan() {
+    const ref = state.parsed[0];
+    if (!ref || !ref.pdfDoc) throw new Error("กรุณาเลือก PDF ก่อน");
+    const options = getPdfScanOptions();
+    const count = ref.pdfDoc.getPageCount();
+    if (count > options.maxPages) throw new Error(`PDF มี ${count} หน้า เกิน Page limit safety (${options.maxPages})`);
+    const pages = [];
+    let prev = null;
+    for (let i = 0; i < count; i += 1) {
+      setStatus(`กำลังวิเคราะห์หน้าสแกน ${i + 1}/${count}...`, "working", 5 + ((i + 1) / count) * 80);
+      const canvas = await renderScanPage(ref, i, 48);
+      const metrics = scanCanvasMetrics(canvas);
+      const diff = prev ? PdfOps.fingerprintDifference(prev, metrics.fingerprint) : 1;
+      const classification = PdfOps.classifyScanPageMetrics(metrics.inkRatio, diff);
+      const blank = classification.blank;
+      const duplicatePrev = i > 0 && classification.duplicatePrev;
+      pages.push({ page: i + 1, inkRatio: metrics.inkRatio, blank, duplicatePrev, diff });
+      prev = metrics.fingerprint;
+      canvas.width = 0; canvas.height = 0;
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    }
+    state.scanAnalysis = { pages, blankCount: pages.filter(p => p.blank).length, duplicateCount: pages.filter(p => p.duplicatePrev).length };
+    if (els.pdfScanAnalysis) {
+      const flags = pages.filter(p => p.blank || p.duplicatePrev).slice(0, 40);
+      els.pdfScanAnalysis.innerHTML = `<strong>Analysis:</strong> ${count} หน้า · Blank candidate ${state.scanAnalysis.blankCount} · Consecutive duplicate candidate ${state.scanAnalysis.duplicateCount}` +
+        (flags.length ? `<div class="scan-flag-list">${flags.map(p => `<span>หน้า ${p.page}: ${p.blank ? "Blank" : "Duplicate of previous"}</span>`).join("")}</div>` : `<small>ไม่พบหน้าที่เข้าข่าย Blank หรือ Duplicate</small>`);
+      els.pdfScanAnalysis.classList.remove("hidden");
+    }
+    setStatus(`วิเคราะห์เสร็จ · Blank ${state.scanAnalysis.blankCount} · Duplicate ${state.scanAnalysis.duplicateCount}`, "success", 100);
+    return state.scanAnalysis;
+  }
+
+  async function processPdfScanCleanup() {
+    const ref = state.parsed[0];
+    if (!ref || !ref.pdfDoc) throw new Error("กรุณาเลือก PDF ก่อน");
+    const options = getPdfScanOptions();
+    const count = ref.pdfDoc.getPageCount();
+    if (count > options.maxPages) throw new Error(`PDF มี ${count} หน้า เกิน Page limit safety (${options.maxPages})`);
+    if ((options.removeBlank || options.removeDuplicates) && !state.scanAnalysis) {
+      throw new Error("กรุณากด Analyze scan pages ก่อนเปิดการลบหน้าว่างหรือหน้าซ้ำ");
+    }
+    const analysisByPage = new Map((state.scanAnalysis && state.scanAnalysis.pages || []).map(p => [p.page, p]));
+    const out = await PDFLib.PDFDocument.create();
+    let removedBlank = 0, removedDup = 0;
+    for (let i = 0; i < count; i += 1) {
+      const a = analysisByPage.get(i + 1);
+      if (options.removeBlank && a && a.blank) { removedBlank += 1; continue; }
+      if (options.removeDuplicates && a && a.duplicatePrev) { removedDup += 1; continue; }
+      setStatus(`กำลัง Cleanup หน้า ${i + 1}/${count}...`, "working", 8 + ((i + 1) / count) * 82);
+      const canvas = await renderScanPage(ref, i, options.dpi);
+      applyScanPixelCleanup(canvas, options);
+      const jpgBytes = await canvasToBytes(canvas, "image/jpeg", options.quality);
+      canvas.width = 0; canvas.height = 0;
+      const jpg = await out.embedJpg(jpgBytes);
+      const sourcePage = ref.pdfDoc.getPage(i);
+      const size = sourcePage.getSize();
+      const page = out.addPage([size.width, size.height]);
+      page.drawImage(jpg, { x: 0, y: 0, width: size.width, height: size.height });
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    }
+    if (out.getPageCount() === 0) throw new Error("ไม่มีหน้าคงเหลือหลัง Cleanup กรุณาปิดการลบหน้าว่าง/หน้าซ้ำแล้วตรวจอีกครั้ง");
+    const bytes = await out.save({ useObjectStreams: true, addDefaultPage: false });
+    const outputName = ensureExtension(els.outputName.value || `${PdfOps.basename(ref.name)}_clean_scan.pdf`, "pdf");
+    downloadBlob(new Blob([bytes], { type: "application/pdf" }), outputName);
+    return `${outputName} เรียบร้อย · ${count} → ${out.getPageCount()} หน้า · ลบ Blank ${removedBlank} · Duplicate ${removedDup} · ${options.label}`;
+  }
+
+  function batchRenameOptions() {
+    return {
+      prefix: els.batchPrefix ? els.batchPrefix.value.trim() : "",
+      suffix: els.batchSuffix ? els.batchSuffix.value.trim() : "",
+      find: els.batchFind ? els.batchFind.value : "",
+      replace: els.batchReplace ? els.batchReplace.value : "",
+      separator: els.batchSeparator ? els.batchSeparator.value : "_",
+      useDate: !!(els.batchUseDate && els.batchUseDate.checked),
+      date: els.batchDate ? els.batchDate.value : "",
+      useRunning: !!(els.batchUseRunning && els.batchUseRunning.checked),
+      runningStart: els.batchRunningStart ? Number(els.batchRunningStart.value || 1) : 1,
+      runningDigits: els.batchRunningDigits ? Number(els.batchRunningDigits.value || 3) : 3,
+      clean: !els.batchClean || els.batchClean.checked,
+      keepExtension: !els.batchKeepExtension || els.batchKeepExtension.checked,
+    };
+  }
+
+  function updateBatchRenamePreview() {
+    if (!els.batchRenamePreview || state.mode !== "batchRename") return;
+    if (!window.BatchRenameOps) {
+      els.batchRenamePreview.innerHTML = "";
+      if (els.batchRenameWarning) {
+        els.batchRenameWarning.textContent = "โหลด Batch Rename engine ไม่สำเร็จ กรุณารีเฟรชหน้าเว็บ";
+        els.batchRenameWarning.classList.remove("hidden");
+      }
+      return;
+    }
+    const plan = BatchRenameOps.buildPlan(state.files, batchRenameOptions());
+    state.batchRenamePlan = plan;
+    const collisions = plan.filter((row) => row.collision).length;
+    const unchanged = plan.filter((row) => !row.changed).length;
+    if (els.batchRenameSummary) {
+      els.batchRenameSummary.textContent = `${plan.length} files · ${collisions ? `${collisions} collision` : "no collision"}`;
+    }
+    els.batchRenamePreview.innerHTML = plan.map((row) => `
+      <tr class="${row.collision ? "rename-collision" : ""}">
+        <td>${row.index + 1}</td>
+        <td title="${escapeHtml(row.original)}">${escapeHtml(row.original)}</td>
+        <td title="${escapeHtml(row.renamed)}"><strong>${escapeHtml(row.renamed)}</strong></td>
+        <td><span class="rename-status ${row.collision ? "danger" : row.changed ? "ok" : "neutral"}">${row.collision ? "ชื่อซ้ำ" : row.changed ? "พร้อม" : "ไม่เปลี่ยน"}</span></td>
+      </tr>`).join("");
+    if (els.batchRenameWarning) {
+      if (collisions) {
+        els.batchRenameWarning.innerHTML = `<strong>พบชื่อไฟล์ซ้ำ ${collisions} รายการ</strong> · กรุณาปรับ Prefix/Suffix/Running Number ก่อนสร้าง ZIP`;
+        els.batchRenameWarning.classList.remove("hidden");
+      } else if (plan.length && unchanged === plan.length) {
+        els.batchRenameWarning.innerHTML = "ยังไม่มีการเปลี่ยนชื่อ · ตั้งค่าอย่างน้อยหนึ่งรายการ หรือใช้ Clean filename เพื่อปรับชื่อที่มีอักขระไม่เหมาะสม";
+        els.batchRenameWarning.classList.remove("hidden");
+      } else {
+        els.batchRenameWarning.textContent = "";
+        els.batchRenameWarning.classList.add("hidden");
+      }
+    }
+  }
+
+  function csvCell(value) {
+    return `"${String(value == null ? "" : value).replace(/"/g, '""')}"`;
+  }
+
+  async function processBatchRename() {
+    if (!window.JSZip) throw new Error("โหลด ZIP library ไม่สำเร็จ กรุณารีเฟรชหน้าเว็บ");
+    if (!window.BatchRenameOps) throw new Error("โหลด Batch Rename engine ไม่สำเร็จ กรุณารีเฟรชหน้าเว็บ");
+    const plan = BatchRenameOps.buildPlan(state.files, batchRenameOptions());
+    if (!plan.length) throw new Error("กรุณาเลือกไฟล์อย่างน้อย 1 ไฟล์");
+    const collisions = plan.filter((row) => row.collision);
+    if (collisions.length) throw new Error(`พบชื่อไฟล์ซ้ำ ${collisions.length} รายการ กรุณาแก้ Rename Preview ก่อนสร้าง ZIP`);
+
+    const zip = new JSZip();
+    const folder = zip.folder("renamed_files");
+    const logRows = [["No.", "Original Filename", "New Filename", "Size Bytes", "Status"]];
+    for (let i = 0; i < plan.length; i += 1) {
+      const row = plan[i];
+      const file = state.files[row.index];
+      setStatus(`กำลังบรรจุไฟล์ ${i + 1}/${plan.length}: ${row.renamed}`, "working", 10 + ((i + 1) / plan.length) * 70);
+      folder.file(row.renamed, file, { binary: true });
+      logRows.push([i + 1, row.original, row.renamed, file.size, row.changed ? "RENAMED" : "UNCHANGED"]);
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    }
+    const csv = "\ufeff" + logRows.map((cols) => cols.map(csvCell).join(",")).join("\r\n");
+    zip.file("rename_log.csv", csv);
+    zip.file("README.txt", "Office Toolkit Batch Rename\r\nOriginal files were not modified. Renamed copies are inside the renamed_files folder.\r\n");
+    setStatus("กำลังสร้าง ZIP...", "working", 90);
+    const blob = await zip.generateAsync({ type: "blob", compression: "DEFLATE", compressionOptions: { level: 6 } });
+    const outputName = ensureExtension(els.outputName.value || "renamed_files.zip", "zip");
+    downloadBlob(blob, outputName);
+    return `${outputName} เรียบร้อย · ${plan.length} ไฟล์ · ไม่พบชื่อซ้ำ · มี rename_log.csv`;
+  }
+
   async function processFiles() {
     const config = currentConfig();
-    const ready = state.mode === "mergePdf" || state.mode === "pdfPageTools"
+    const ready = state.mode === "mergePdf" || state.mode === "pdfPageTools" || state.mode === "pdfWatermark"
       ? state.pages.length >= 1
       : state.mode === "optimizeExcel"
         ? state.parsed.length === 1 && !!state.optimizeAnalysis
@@ -1958,6 +2495,10 @@
       else if (state.mode === "oracleArCleaner") message = await processOracleArCleaner();
       else if (state.mode === "compressPdf") message = await processCompressPdf();
       else if (state.mode === "pdfPageTools") message = await processPdfPageTools();
+      else if (state.mode === "pdfWatermark") message = await processPdfWatermark();
+      else if (state.mode === "imageToPdf") message = await processImageToPdf();
+      else if (state.mode === "pdfScanCleanup") message = await processPdfScanCleanup();
+      else if (state.mode === "batchRename") message = await processBatchRename();
       else if (state.mode === "mergePdf") message = await processMergePdf();
       else message = await processSplitPdf();
       setStatus(message, "success", 100);
@@ -1975,6 +2516,14 @@
       renderFiles();
       updatePdfPageToolsOptions();
     }
+  }
+
+  const batchRenameInputs = [els.batchPrefix, els.batchSuffix, els.batchFind, els.batchReplace, els.batchSeparator, els.batchDate, els.batchUseDate, els.batchUseRunning, els.batchRunningStart, els.batchRunningDigits, els.batchClean, els.batchKeepExtension].filter(Boolean);
+  batchRenameInputs.forEach((input) => input.addEventListener(input.tagName === "SELECT" || input.type === "checkbox" || input.type === "date" ? "change" : "input", updateBatchRenamePreview));
+  if (els.batchDate && !els.batchDate.value) {
+    const now = new Date();
+    const local = new Date(now.getTime() - (now.getTimezoneOffset() * 60000));
+    els.batchDate.value = local.toISOString().slice(0, 10);
   }
 
   els.categoryButtons.forEach((button) => button.addEventListener("click", () => updateCategory(button.dataset.category)));
@@ -2040,6 +2589,24 @@
     renderPageGrid();
   });
   if (els.pdfAddBlank) els.pdfAddBlank.addEventListener("click", addBlankPage);
+
+  if (els.pdfScanAnalyze) els.pdfScanAnalyze.addEventListener("click", () => analyzePdfScan().catch((error) => setStatus(error.message || "วิเคราะห์ PDF ไม่สำเร็จ", "error", 0)));
+  if (els.pdfScanContrast) els.pdfScanContrast.addEventListener("input", updatePdfScanOptions);
+  [els.pdfScanProfile, els.pdfScanMaxPages, els.pdfScanGrayscale, els.pdfScanRemoveBlank, els.pdfScanRemoveDuplicates].filter(Boolean).forEach((control) => control.addEventListener("change", updatePdfScanOptions));
+
+  if (els.pdfWatermarkPreset) els.pdfWatermarkPreset.addEventListener("change", updatePdfWatermarkOptions);
+  [els.pdfWatermarkText, els.pdfWatermarkPosition, els.pdfWatermarkFontSize, els.pdfWatermarkOpacity,
+   els.pdfWatermarkRotation, els.pdfWatermarkRangeMode, els.pdfWatermarkCustomRange,
+   els.pdfWatermarkPageNumber, els.pdfWatermarkFilename].filter(Boolean).forEach((control) => {
+    control.addEventListener(control.type === "text" || control.type === "number" || control.type === "range" ? "input" : "change", updatePdfWatermarkOptions);
+  });
+
+  [els.imagePdfPageSize, els.imagePdfOrientation, els.imagePdfMargin, els.imagePdfQuality].filter(Boolean).forEach((control) => {
+    control.addEventListener("change", () => {
+      if (state.mode === "imageToPdf") renderImagePdfPreview();
+    if (state.mode === "batchRename") updateBatchRenamePreview();
+    });
+  });
 
   let dragPageId = null;
   els.pageGridList.addEventListener("dragstart", (event) => {

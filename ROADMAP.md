@@ -12,6 +12,8 @@ Goal: turn the growing MergeExcels utility into one coherent Office Toolkit with
 - [ ] Production/UAT confirmation remains part of final hardening, not a reason to block feature development.
 
 ## Phase 1 — Core PDF & File Tools
+
+**Phase 1 status: COMPLETE at build level in v4.5.0; Codespaces full regression/deploy verification required before production sign-off.**
 Goal: daily-use utilities for general staff.
 
 ### Phase 1A — PDF Page Tools (v4.1.0) — IMPLEMENTED / AWAITING DEPLOYED UAT
@@ -27,26 +29,32 @@ Goal: daily-use utilities for general staff.
 - [x] Automated PDF engine regression tests.
 - [ ] Deployed browser UAT on representative real PDFs.
 
-### Phase 1B — PDF Watermark & Stamp
+### Phase 1B — PDF Watermark & Stamp (v4.2.0) — IMPLEMENTED / AWAITING DEPLOYED UAT
 - Text watermark/stamp
 - Draft / Confidential / Internal Use presets
 - Page number and filename stamping
 - Position, opacity and page-range controls
 
-### Phase 1C — Image to PDF
-- JPG/PNG/WebP input
-- Multiple images to one PDF
-- A4 fit / original size
-- Portrait/landscape and reorder
+### Phase 1C — Image to PDF (v4.3.0) — IMPLEMENTED / AWAITING DEPLOYED UAT
+- [x] JPG/PNG/WebP input
+- [x] Multiple images to one PDF
+- [x] A4 fit / original size
+- [x] Portrait/landscape and reorder
+- [x] Margin and image-quality controls
+- [x] Local preview and non-destructive export
 
-### Phase 1D — PDF Scan Cleanup
-- Grayscale / contrast-oriented cleanup
-- Blank-page detection/removal
-- Margin/crop assistance where reliable
-- Duplicate-page detection where reliable
-- Heavy OCR/deskew is not added unless browser performance is proven
+### Phase 1D — PDF Scan Cleanup (v4.4.0) — IMPLEMENTED / AWAITING DEPLOYED UAT
+- [x] Grayscale and adjustable contrast cleanup
+- [x] Scan profiles for quality / balanced / smaller output
+- [x] Blank-page candidate detection with analysis before optional removal
+- [x] Consecutive duplicate-page candidate detection before optional removal
+- [x] Page-count safety guard and browser-local recompression
+- [x] Original PDF remains unchanged; output is a new rasterized PDF
+- [ ] Automatic crop/margin removal deferred: unsafe without stronger edge detection on representative scans
+- [ ] Heavy OCR/deskew deferred until browser performance is proven
+- [ ] Deployed browser UAT on representative real scanned PDFs
 
-### Phase 1E — Batch Rename
+### Phase 1E — Batch Rename — COMPLETE (v4.5.0)
 - Filename pattern preview
 - Running number/date/customer code placeholders
 - Sanitize illegal filename characters

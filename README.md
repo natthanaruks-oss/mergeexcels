@@ -170,3 +170,22 @@ Cloudflare Build Settings:
 
 ## Office Toolkit v4.1.0 — Phase 1A
 Adds PDF Page Tools: visual reorder, rotate, delete, duplicate, selected-page extraction, odd/even split, every-N-page split, and safe blank-page insertion. Source PDFs remain untouched; a new output is generated locally in the browser.
+
+
+## Office Toolkit v4.2.0 — Phase 1B
+- PDF Watermark & Stamp: DRAFT / CONFIDENTIAL / INTERNAL USE / Custom Latin text
+- Position, opacity, font size, rotation, page range
+- Optional page number and source filename
+- Local preview and local-only export
+
+## Office Toolkit v4.3.0 — Phase 1C
+
+เพิ่ม Image to PDF สำหรับ JPG/PNG/WebP หลายภาพ พร้อม A4 Fit / Original Size, Orientation, Margin, Quality, Preview และ Reorder โดยประมวลผล Local 100%.
+
+
+## Office Toolkit v4.5.0 — Phase 1D
+Adds PDF Scan Cleanup for browser-local scanned-document cleanup: grayscale, adjustable contrast, controlled raster quality, blank-page candidate analysis, consecutive duplicate-page candidate analysis and optional removal after analysis. Original files are not modified. Automatic crop, heavy deskew and OCR are intentionally deferred pending reliable browser UAT.
+
+
+### Batch Rename
+Preview and rename multiple local files safely, then download renamed copies as ZIP with a rename log. Original files are not modified.
