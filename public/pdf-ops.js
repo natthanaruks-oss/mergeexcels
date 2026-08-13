@@ -105,11 +105,86 @@
     return output.save({ useObjectStreams: true });
   }
 
+
+  function normalizeRotation(value) {
+    const numeric = Number(value) || 0;
+    return ((numeric % 360) + 360) % 360;
+  }
+
+  async function buildPdfFromPagePlan(PDFLib, pagePlan, onProgress) {
+    requirePdfLib(PDFLib);
+    if (!Array.isArray(pagePlan) || pagePlan.length < 1) {
+      throw new Error("No PDF pages were selected.");
+    }
+
+    const output = await PDFLib.PDFDocument.create();
+    const total = pagePlan.length;
+    for (let index = 0; index < pagePlan.length; index += 1) {
+      const item = pagePlan[index];
+      if (item && item.blank) {
+        const width = Math.max(72, Number(item.width) || 595.28);
+        const height = Math.max(72, Number(item.height) || 841.89);
+        const page = output.addPage([width, height]);
+        if (item.rotation) page.setRotation(PDFLib.degrees(normalizeRotation(item.rotation)));
+      } else {
+        if (!item || !item.srcDoc || !Number.isInteger(item.pageIndex)) {
+          throw new Error("A selected PDF page could not be read.");
+        }
+        const [page] = await output.copyPages(item.srcDoc, [item.pageIndex]);
+        if (item.rotation) {
+          const original = page.getRotation && page.getRotation().angle ? page.getRotation().angle : 0;
+          page.setRotation(PDFLib.degrees(normalizeRotation(original + item.rotation)));
+        }
+        output.addPage(page);
+      }
+      if (typeof onProgress === "function") onProgress(index + 1, total);
+    }
+    return output.save({ useObjectStreams: true, addDefaultPage: false });
+  }
+
+  function splitPagePlanOddEven(pagePlan) {
+    if (!Array.isArray(pagePlan)) throw new Error("Page plan is required.");
+    return {
+      odd: pagePlan.filter((_, index) => index % 2 === 0),
+      even: pagePlan.filter((_, index) => index % 2 === 1),
+    };
+  }
+
+  function splitPagePlanByCount(pagePlan, chunkSize) {
+    if (!Array.isArray(pagePlan)) throw new Error("Page plan is required.");
+    const size = Number(chunkSize);
+    if (!Number.isInteger(size) || size < 1) throw new Error("Pages per file must be at least 1.");
+    const chunks = [];
+    for (let index = 0; index < pagePlan.length; index += size) {
+      chunks.push(pagePlan.slice(index, index + size));
+    }
+    return chunks;
+  }
+
+
+  async function optimizePdfStructure(PDFLib, inputBytes) {
+    requirePdfLib(PDFLib);
+    if (!inputBytes || !inputBytes.length) throw new Error("Select a PDF file.");
+    let doc;
+    try {
+      doc = await PDFLib.PDFDocument.load(inputBytes, { updateMetadata: false, ignoreEncryption: true });
+    } catch (error) {
+      throw new Error("ไม่สามารถอ่าน PDF ได้ หรือไฟล์มีรหัสผ่าน/เข้ารหัส");
+    }
+    if (doc.getPageCount() === 0) throw new Error("No PDF pages were found.");
+    return doc.save({ useObjectStreams: true, addDefaultPage: false });
+  }
+
   return {
     basename,
     sanitizeFilename,
     mergePdfDocuments,
     mergePdfPages,
+    buildPdfFromPagePlan,
+    splitPagePlanOddEven,
+    splitPagePlanByCount,
+    normalizeRotation,
+    optimizePdfStructure,
     splitPdfDocument,
   };
 });

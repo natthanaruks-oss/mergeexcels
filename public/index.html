@@ -3,104 +3,138 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="รวม ต่อ และแยกไฟล์ Excel และ PDF บนเบราว์เซอร์โดยไม่อัปโหลดไฟล์ขึ้นเซิร์ฟเวอร์" />
-    <title>MergeExcels — Excel & PDF File Toolkit</title>
-    <link rel="stylesheet" href="./styles.css?v=3.6.0" />
-    <script defer src="./vendor/xlsx.full.min.js?v=3.6.0"></script>
-    <script defer src="./vendor/jszip.min.js?v=3.6.0"></script>
-    <script defer src="./vendor/pdf-lib.min.js?v=3.6.0"></script>
-    <script defer src="./vendor/pdf.min.js?v=3.6.0"></script>
-    <script defer src="./excel-ops.js?v=3.6.0"></script>
-    <script defer src="./pdf-ops.js?v=3.6.0"></script>
-    <script defer src="./thai-roads-config.js?v=3.6.0"></script>
-    <script defer src="./text-correct.js?v=3.6.0"></script>
-    <script defer src="./pdftable-ops.js?v=3.6.0"></script>
-    <script defer src="./optimize-ops.js?v=3.6.0"></script>
-    <script defer src="./budget-master.js?v=3.6.0"></script>
-    <script defer src="./budget-history-rules.js?v=3.6.0"></script>
-    <script defer src="./budget-builder-ops.js?v=3.6.0"></script>
-    <script defer src="./app.js?v=3.6.0"></script>
+    <meta name="description" content="Office Toolkit สำหรับ Excel, PDF, Conversion และ Business Data โดยประมวลผลไฟล์แบบ Local-first ในเบราว์เซอร์" />
+    <title>Office Toolkit — Local-first File Utility</title>
+    <link rel="stylesheet" href="./styles.css?v=4.1.0" />
+    <script defer src="./vendor/xlsx.full.min.js?v=4.1.0"></script>
+    <script defer src="./vendor/jszip.min.js?v=4.1.0"></script>
+    <script defer src="./vendor/pdf-lib.min.js?v=4.1.0"></script>
+    <script defer src="./vendor/pdf.min.js?v=4.1.0"></script>
+    <script defer src="./excel-ops.js?v=4.1.0"></script>
+    <script defer src="./pdf-ops.js?v=4.1.0"></script>
+    <script defer src="./thai-roads-config.js?v=4.1.0"></script>
+    <script defer src="./text-correct.js?v=4.1.0"></script>
+    <script defer src="./pdftable-ops.js?v=4.1.0"></script>
+    <script defer src="./optimize-ops.js?v=4.1.0"></script>
+    <script defer src="./budget-master.js?v=4.1.0"></script>
+    <script defer src="./budget-history-rules.js?v=4.1.0"></script>
+    <script defer src="./budget-builder-ops.js?v=4.1.0"></script>
+    <script defer src="./app.js?v=4.1.0"></script>
   </head>
   <body>
     <header class="site-header">
-      <div class="brand-mark" aria-hidden="true">M</div>
-      <div>
-        <div class="brand-title-row"><h1>MergeExcels</h1><span class="version-badge">v3.6.0</span></div>
-        <p>เครื่องมือรวม ต่อ และแยกไฟล์ Excel และ PDF โดยประมวลผลในเบราว์เซอร์</p>
+      <div class="brand-mark" aria-hidden="true">O</div>
+      <div class="brand-copy">
+        <div class="brand-title-row"><h1>Office Toolkit</h1><span class="version-badge">v4.1.0</span></div>
+        <p>All-in-one Local Office File Utility · Excel · PDF · Conversion · Business Tools</p>
       </div>
+      <span class="header-local-badge">LOCAL-FIRST</span>
     </header>
 
     <main class="app-shell">
+      <section class="tool-catalog" aria-labelledby="toolCatalogTitle">
+        <div class="catalog-heading">
+          <div>
+            <p class="eyebrow">OFFICE TOOLKIT</p>
+            <h2 id="toolCatalogTitle">เลือกเครื่องมือที่ต้องการใช้</h2>
+            <p>ฟังก์ชันเดิมทั้งหมดยังคงอยู่ เพียงจัดใหม่เป็นหมวดเพื่อให้ค้นหาและขยายระบบได้ง่ายขึ้น</p>
+          </div>
+          <div class="catalog-count"><strong>12</strong><span>Tools ready</span></div>
+        </div>
+        <nav class="category-tabs" aria-label="หมวดเครื่องมือ">
+          <button class="category-tab active" type="button" data-category="all" aria-pressed="true">ทั้งหมด</button>
+          <button class="category-tab" type="button" data-category="excel" aria-pressed="false">Excel</button>
+          <button class="category-tab" type="button" data-category="pdf" aria-pressed="false">PDF</button>
+          <button class="category-tab" type="button" data-category="conversion" aria-pressed="false">Conversion</button>
+          <button class="category-tab" type="button" data-category="business" aria-pressed="false">Business</button>
+        </nav>
+      </section>
+
       <section class="mode-grid" aria-label="เลือกเครื่องมือ">
-        <button class="mode-card active" type="button" data-mode="mergeExcel" aria-pressed="true">
+        <button class="mode-card active" type="button" data-mode="mergeExcel" data-category="excel" aria-pressed="true">
           <span class="mode-number">01</span>
           <span class="mode-type">EXCEL</span>
           <strong>Merge Files</strong>
           <span>รวมทุก Sheet จากหลายไฟล์ไว้ใน Workbook เดียว</span>
           <small>ผลลัพธ์: 1 ไฟล์ หลาย Sheet</small>
         </button>
-        <button class="mode-card" type="button" data-mode="combineExcel" aria-pressed="false">
+        <button class="mode-card" type="button" data-mode="combineExcel" data-category="excel" aria-pressed="false">
           <span class="mode-number">02</span>
           <span class="mode-type">EXCEL</span>
           <strong>Combine Sheets</strong>
           <span>นำข้อมูลจากทุก Sheet มาต่อกันเป็นตารางเดียว</span>
           <small>ผลลัพธ์: 1 ไฟล์ 1 Sheet</small>
         </button>
-        <button class="mode-card" type="button" data-mode="splitExcel" aria-pressed="false">
+        <button class="mode-card" type="button" data-mode="splitExcel" data-category="excel" aria-pressed="false">
           <span class="mode-number">03</span>
           <span class="mode-type">EXCEL</span>
           <strong>Split File</strong>
           <span>แยกแต่ละ Sheet ออกเป็นไฟล์ Excel แยกกัน</span>
           <small>ผลลัพธ์: ZIP หลายไฟล์</small>
         </button>
-        <button class="mode-card pdf-card" type="button" data-mode="mergePdf" aria-pressed="false">
+        <button class="mode-card pdf-card" type="button" data-mode="mergePdf" data-category="pdf" aria-pressed="false">
           <span class="mode-number">04</span>
           <span class="mode-type">PDF</span>
           <strong>Merge PDF</strong>
           <span>รวมหน้าจาก PDF หลายไฟล์ตามลำดับที่เลือก</span>
           <small>ผลลัพธ์: 1 PDF</small>
         </button>
-        <button class="mode-card pdf-card" type="button" data-mode="splitPdf" aria-pressed="false">
+        <button class="mode-card pdf-card" type="button" data-mode="splitPdf" data-category="pdf" aria-pressed="false">
           <span class="mode-number">05</span>
           <span class="mode-type">PDF</span>
           <strong>Split PDF</strong>
           <span>แยก PDF เป็นไฟล์ละหนึ่งหน้า</span>
           <small>ผลลัพธ์: ZIP หลาย PDF</small>
         </button>
-        <button class="mode-card convert-card" type="button" data-mode="pdf2excel" aria-pressed="false">
+        <button class="mode-card convert-card" type="button" data-mode="pdf2excel" data-category="conversion" aria-pressed="false">
           <span class="mode-number">06</span>
           <span class="mode-type">PDF → EXCEL</span>
           <strong>PDF to Excel</strong>
           <span>ดึงข้อความและตารางจาก PDF ออกมาเป็น Excel</span>
           <small>ผลลัพธ์: 1 ไฟล์ Excel · ทุกหน้ารวมใน Sheet เดียว</small>
         </button>
-        <button class="mode-card ocr-card" type="button" data-mode="ocr2excel" aria-pressed="false">
+        <button class="mode-card ocr-card" type="button" data-mode="ocr2excel" data-category="conversion" aria-pressed="false">
           <span class="mode-number">07</span>
           <span class="mode-type">OCR · ทดลอง</span>
           <strong>PDF สแกน → Excel</strong>
           <span>อ่านตัวอักษรจาก PDF ที่เป็นรูปภาพ/สแกน (ไทย+อังกฤษ)</span>
           <small>โหลด OCR ครั้งแรก ~7MB · ช้ากว่าปกติ</small>
         </button>
-        <button class="mode-card optimize-card" type="button" data-mode="optimizeExcel" aria-pressed="false">
+        <button class="mode-card optimize-card" type="button" data-mode="optimizeExcel" data-category="excel" aria-pressed="false">
           <span class="mode-number">08</span>
           <span class="mode-type">EXCEL · OPTIMIZE</span>
           <strong>Reduce Excel Size</strong>
           <span>ลดขนาดและแบ่งไฟล์ Oracle Export โดยไม่ทำให้หน้าจอค้าง</span>
           <small>Analyze · Values Only · Split Rows · CSV</small>
         </button>
-        <button class="mode-card budget-card" type="button" data-mode="budgetBuilder" aria-pressed="false">
+        <button class="mode-card budget-card" type="button" data-mode="budgetBuilder" data-category="business" aria-pressed="false">
           <span class="mode-number">09</span>
           <span class="mode-type">BI · BUDGET</span>
           <strong>DOH/DOR Budget Builder</strong>
           <span>แปลง Clean Raw Data เป็นไฟล์วิเคราะห์งบและประมาณการปริมาณผลิตภัณฑ์</span>
           <small>Province · Region · Work Type · Factor · Validation</small>
         </button>
-        <button class="mode-card oracle-ar-card" type="button" data-mode="oracleArCleaner" aria-pressed="false">
+        <button class="mode-card oracle-ar-card" type="button" data-mode="oracleArCleaner" data-category="business" aria-pressed="false">
           <span class="mode-number">10</span>
           <span class="mode-type">ORACLE · AR</span>
           <strong>AR Statement Cleaner</strong>
           <span>แปลง Oracle BI Publisher .xls เป็นข้อมูล AR รายลูกค้า</span>
           <small>Customer Index · Summary · Transactions · 1 Sheet/Customer</small>
+        </button>
+        <button class="mode-card pdf-compress-card" type="button" data-mode="compressPdf" data-category="pdf" aria-pressed="false">
+          <span class="mode-number">11</span>
+          <span class="mode-type">PDF · COMPRESS</span>
+          <strong>Reduce PDF Size</strong>
+          <span>ลดขนาดไฟล์ PDF ด้วย Safe Optimize หรือแปลงหน้าเป็นภาพคุณภาพที่เลือก</span>
+          <small>Safe · Email · Strong · Max · Local 100%</small>
+        </button>
+
+        <button class="mode-card pdf-card page-tools-card" type="button" data-mode="pdfPageTools" data-category="pdf" aria-pressed="false">
+          <span class="mode-number">12</span>
+          <span class="mode-type">PDF · PAGE TOOLS</span>
+          <strong>PDF Page Tools</strong>
+          <span>จัดหน้า PDF แบบเห็นภาพ: Rotate · Delete · Duplicate · Extract · Split · Blank Page</span>
+          <small>Reorder · Odd/Even · Split every N · Local 100%</small>
         </button>
       </section>
 
@@ -331,6 +365,84 @@
           </section>
         </section>
 
+
+
+        <section id="pdfCompressOptions" class="options-panel pdf-compress-panel hidden" aria-labelledby="pdfCompressTitle">
+          <div class="panel-heading">
+            <div>
+              <h3 id="pdfCompressTitle">ตั้งค่าลดขนาดไฟล์ PDF</h3>
+              <small>Safe Optimize จะพยายามลดโครงสร้างไฟล์โดยคงข้อความ/เวกเตอร์ไว้ ส่วนโหมดบีบอัดภาพจะลดขนาดได้มากกว่าแต่หน้า PDF จะถูก Flatten เป็นภาพ</small>
+            </div>
+            <span class="local-badge">100% LOCAL</span>
+          </div>
+          <div class="pdf-compress-grid">
+            <label class="field-group">
+              <span>Compression Profile</span>
+              <select id="pdfCompressProfile">
+                <option value="safe" selected>Safe Optimize — คง Text/Vector ลดได้เล็กน้อย</option>
+                <option value="email">Email — 120 DPI / JPEG 72%</option>
+                <option value="strong">Strong — 96 DPI / JPEG 58%</option>
+                <option value="max">Max Reduction — 72 DPI / JPEG 45%</option>
+              </select>
+              <small>หากไฟล์เป็นเอกสารสแกนหรือมีรูปเยอะ ให้ใช้ Email/Strong/Max จะลดได้ชัดกว่า</small>
+            </label>
+            <label class="field-group">
+              <span>Page limit safety</span>
+              <input id="pdfCompressMaxPages" type="number" min="1" max="500" step="1" value="200" />
+              <small>ป้องกัน Browser ค้างเมื่อไฟล์ PDF มีหลายร้อยหน้า</small>
+            </label>
+          </div>
+          <div class="option-check-grid">
+            <label class="check-row compact">
+              <input id="pdfCompressGrayscale" type="checkbox" />
+              <span><strong>Convert to grayscale</strong><small>ลดขนาดเพิ่มเมื่อเอกสารไม่ต้องการสี</small></span>
+            </label>
+            <label class="check-row compact">
+              <input id="pdfKeepSmaller" type="checkbox" checked />
+              <span><strong>Keep smaller result</strong><small>ถ้าผลลัพธ์ใหญ่กว่าไฟล์เดิม จะใช้ไฟล์ที่เล็กกว่าแทน</small></span>
+            </label>
+          </div>
+          <div class="pdf-compress-note">
+            <strong>ข้อควรรู้:</strong> โหมด Email/Strong/Max จะเปลี่ยนทุกหน้าเป็นภาพ จึงค้นหาข้อความ เลือกข้อความ และลายเซ็นดิจิทัลเดิมอาจใช้ไม่ได้ เหมาะสำหรับไฟล์สแกน รูปภาพ หรือเอกสารที่ต้องการส่งอีเมลให้เล็กลง
+          </div>
+        </section>
+
+
+        <section id="pdfPageToolsOptions" class="options-panel pdf-page-tools-panel hidden" aria-labelledby="pdfPageToolsTitle">
+          <div class="panel-heading">
+            <div>
+              <h3 id="pdfPageToolsTitle">PDF Page Tools</h3>
+              <small>แก้เฉพาะสำเนาผลลัพธ์ ไฟล์ต้นฉบับไม่ถูกเปลี่ยน · ใช้ Preview ด้านบนเพื่อลากเรียงหน้า หมุน ทำสำเนา หรือลบ</small>
+            </div>
+            <span class="local-badge">100% LOCAL</span>
+          </div>
+          <div class="pdf-page-tools-grid">
+            <label class="field-group">
+              <span>Output action</span>
+              <select id="pdfPageToolsAction">
+                <option value="edited" selected>Save edited PDF — บันทึกตามลำดับหน้าปัจจุบัน</option>
+                <option value="extract">Extract selected pages — ดึงเฉพาะหน้าที่เลือก</option>
+                <option value="oddEven">Split odd / even — แยกหน้าคี่และหน้าคู่เป็น ZIP</option>
+                <option value="everyN">Split every N pages — แบ่งทุก N หน้าเป็น ZIP</option>
+              </select>
+              <small>การ Delete/Reorder/Rotate/Duplicate ใน Preview จะมีผลกับผลลัพธ์ทุกโหมด</small>
+            </label>
+            <label id="pdfSplitEveryNField" class="field-group hidden">
+              <span>Pages per file</span>
+              <input id="pdfSplitEveryN" type="number" min="1" max="500" step="1" value="10" />
+              <small>ตัวอย่าง 10 = หน้า 1–10, 11–20, ...</small>
+            </label>
+          </div>
+          <div class="pdf-page-toolbar" role="group" aria-label="เครื่องมือเลือกหน้า">
+            <button id="pdfSelectAll" type="button" class="secondary-button">เลือกทุกหน้า</button>
+            <button id="pdfClearSelection" type="button" class="secondary-button">ยกเลิกการเลือก</button>
+            <button id="pdfAddBlank" type="button" class="secondary-button">+ Blank page</button>
+          </div>
+          <div class="pdf-page-tools-note">
+            <strong>วิธีใช้:</strong> เลือก PDF → จัดหน้าใน Preview → ใช้ ↶/↷ เพื่อหมุน, ⧉ เพื่อ Duplicate, × เพื่อลบ, checkbox สำหรับ Extract → เลือก Output action → Export
+          </div>
+        </section>
+
         <section id="analysisPanel" class="analysis-panel hidden" aria-labelledby="analysisTitle">
           <div class="analysis-head">
             <div>
@@ -433,12 +545,23 @@
             <strong>AR Statement Cleaner</strong>
             <p>รวม Oracle Statement ที่กระจายเป็นหลายร้อยตารางให้เป็น Customer Index, Summary, All Transactions และ Sheet รายลูกค้า</p>
           </article>
+          <article>
+            <span class="note-type pdf-compress">PDF · COMPRESS</span>
+            <strong>Reduce PDF Size</strong>
+            <p>ลดขนาด PDF แบบ Safe หรือแปลงหน้าเป็นภาพคุณภาพที่เลือก เหมาะกับไฟล์สแกนและเอกสารรูปภาพขนาดใหญ่</p>
+          </article>
+
+          <article>
+            <span class="note-type pdf">PDF · PAGE TOOLS</span>
+            <strong>PDF Page Tools</strong>
+            <p>จัดลำดับ หมุน ลบ ทำสำเนา Extract หรือ Split หน้า PDF โดย Preview ก่อน Export และไม่แก้ไฟล์ต้นฉบับ</p>
+          </article>
         </div>
         <p class="privacy-note">ไฟล์ถูกประมวลผลบนเครื่องของคุณ ไม่ได้อัปโหลดไปยังเซิร์ฟเวอร์</p>
         <p class="limitation-note">Excel: Chart, รูปภาพ, Macro และฟีเจอร์ขั้นสูงบางอย่างอาจไม่ถูกเก็บไว้ · PDF: ไม่รองรับไฟล์ที่เข้ารหัสหรือมีรหัสผ่าน และลายเซ็นดิจิทัลอาจใช้ไม่ได้หลังแก้ไข</p>
       </section>
     </main>
 
-    <footer>MergeExcels v3.6.0 — Excel & PDF Toolkit</footer>
+    <footer>Office Toolkit v4.1.0 · Local-first · ไฟล์ประมวลผลบนอุปกรณ์ของผู้ใช้</footer>
   </body>
 </html>

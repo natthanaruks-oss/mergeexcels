@@ -9,6 +9,9 @@ const requiredFiles = [
   "package.json",
   "package-lock.json",
   "wrangler.jsonc",
+  "spec.md",
+  "ROADMAP.md",
+  "MEMORY.md",
   "public/index.html",
   "public/app.js",
   "public/_headers",
@@ -94,8 +97,27 @@ if (!indexHtml.includes("budget-history-rules.js") || !budgetHistory.includes("H
   throw new Error("Historical Rule Engine ของเมนู 09 เชื่อมต่อไม่ครบ");
 }
 
+if (!indexHtml.includes('Office Toolkit') || !indexHtml.includes('data-category="excel"') || !indexHtml.includes('data-category="business"')) {
+  throw new Error("Office Toolkit product shell/category navigation ไม่ครบ");
+}
+if (!app.includes("updateCategory") || !indexHtml.includes('class="category-tabs"')) {
+  throw new Error("Category navigation logic ไม่ครบ");
+}
+
 if (!indexHtml.includes('data-mode="oracleArCleaner"') || !app.includes('processOracleArCleaner')) {
   throw new Error("เมนู 10 Oracle AR Statement Cleaner เชื่อมต่อไม่ครบ");
+}
+if (!indexHtml.includes('data-mode="compressPdf"') || !app.includes('processCompressPdf')) {
+  throw new Error("เมนู 11 PDF Compressor เชื่อมต่อไม่ครบ");
+}
+if (!app.includes("optimizePdfStructure") || !indexHtml.includes("pdfCompressProfile")) {
+  throw new Error("PDF Compressor engine/options ไม่ครบ");
+}
+if (!indexHtml.includes('data-mode="pdfPageTools"') || !app.includes('processPdfPageTools')) {
+  throw new Error("Phase 1A PDF Page Tools เชื่อมต่อไม่ครบ");
+}
+if (!app.includes("buildPdfFromPagePlan") || !indexHtml.includes("pdfPageToolsAction")) {
+  throw new Error("PDF Page Tools engine/options ไม่ครบ");
 }
 if (!app.includes(`oracle-ar-worker.js?v=${releaseVersion}`)) {
   throw new Error(`Oracle AR Worker cache-busting version ไม่ตรงกับ package.json (${releaseVersion})`);

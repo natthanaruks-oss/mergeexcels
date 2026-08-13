@@ -167,3 +167,6 @@ Cloudflare Build Settings:
 - สร้างข้อมูลรายลูกค้าแทนการแตกเป็นหลายร้อย/หลายพัน Sheet ตามจำนวน HTML Table
 - รองรับ Customer Index, Customer Summary, All Transactions, Exceptions และ 1 Sheet ต่อลูกค้า
 - ใช้ Running Balance เพื่อคำนวณ Effective Debit/Credit และตรวจ Reconciliation
+
+## Office Toolkit v4.1.0 — Phase 1A
+Adds PDF Page Tools: visual reorder, rotate, delete, duplicate, selected-page extraction, odd/even split, every-N-page split, and safe blank-page insertion. Source PDFs remain untouched; a new output is generated locally in the browser.

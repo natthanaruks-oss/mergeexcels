@@ -138,6 +138,32 @@
       dropHint: "รองรับ Oracle BI Publisher HTML .xls · ระบบตัดแบบฟอร์มชำระเงินและตารางซ้ำออกอัตโนมัติ",
       unitLabel: "ลูกค้า",
     },
+    compressPdf: {
+      kind: "pdf",
+      eyebrow: "COMPRESS PDF",
+      title: "ลดขนาดไฟล์ PDF",
+      description: "ลดขนาด PDF แบบ Safe Optimize หรือแปลงหน้าเป็นภาพ JPEG คุณภาพที่เลือก — ประมวลผลบนเครื่อง 100%",
+      button: "เริ่มลดขนาด PDF",
+      output: "compressed.pdf",
+      extension: "pdf",
+      multiple: false,
+      dropTitle: "เลือก PDF 1 ไฟล์ที่ต้องการลดขนาด",
+      dropHint: "เหมาะกับ PDF สแกนหรือไฟล์รูปภาพขนาดใหญ่ · ไฟล์ที่มีแต่ข้อความอาจลดได้ไม่มาก",
+      unitLabel: "หน้า",
+    },
+    pdfPageTools: {
+      kind: "pdf",
+      eyebrow: "PDF PAGE TOOLS",
+      title: "จัดหน้า PDF แบบเห็นภาพก่อน Export",
+      description: "Rotate · Delete · Duplicate · Extract · Reorder · Split odd/even · Split every N pages โดยไม่แก้ไขไฟล์ต้นฉบับ",
+      button: "Export PDF",
+      output: "edited_pages.pdf",
+      extension: "pdf",
+      multiple: false,
+      dropTitle: "เลือก PDF 1 ไฟล์ที่ต้องการจัดหน้า",
+      dropHint: "หลังเลือกไฟล์ ระบบจะแสดง Preview ทุกหน้าเพื่อจัดลำดับและแก้ไข",
+      unitLabel: "หน้า",
+    },
   };
 
   const state = {
@@ -146,6 +172,8 @@
     parsed: [],
     busy: false,
     pages: [],
+    pageSelection: new Set(),
+    pageUid: 0,
     fileUid: 0,
     renderToken: 0,
     pdfjsDocs: new Map(),
@@ -174,6 +202,7 @@
 
   const els = {
     modeCards: [...document.querySelectorAll(".mode-card")],
+    categoryButtons: [...document.querySelectorAll(".category-tab")],
     modeEyebrow: document.getElementById("modeEyebrow"),
     modeTitle: document.getElementById("modeTitle"),
     modeDescription: document.getElementById("modeDescription"),
@@ -200,6 +229,18 @@
     oracleArAnalysis: document.getElementById("oracleArAnalysis"),
     oracleArEntity: document.getElementById("oracleArEntity"),
     oracleArMetrics: document.getElementById("oracleArMetrics"),
+    pdfCompressOptions: document.getElementById("pdfCompressOptions"),
+    pdfCompressProfile: document.getElementById("pdfCompressProfile"),
+    pdfCompressMaxPages: document.getElementById("pdfCompressMaxPages"),
+    pdfCompressGrayscale: document.getElementById("pdfCompressGrayscale"),
+    pdfKeepSmaller: document.getElementById("pdfKeepSmaller"),
+    pdfPageToolsOptions: document.getElementById("pdfPageToolsOptions"),
+    pdfPageToolsAction: document.getElementById("pdfPageToolsAction"),
+    pdfSplitEveryNField: document.getElementById("pdfSplitEveryNField"),
+    pdfSplitEveryN: document.getElementById("pdfSplitEveryN"),
+    pdfSelectAll: document.getElementById("pdfSelectAll"),
+    pdfClearSelection: document.getElementById("pdfClearSelection"),
+    pdfAddBlank: document.getElementById("pdfAddBlank"),
     budgetAgency: document.getElementById("budgetAgency"),
     budgetSourceSheet: document.getElementById("budgetSourceSheet"),
     constructionPercent: document.getElementById("constructionPercent"),
@@ -394,7 +435,7 @@
     if (!state.oracleArBuffer) return Promise.reject(new Error("ไม่พบข้อมูลไฟล์ Oracle AR กรุณาเลือกไฟล์ใหม่"));
     terminateOracleArWorker();
     const jobId = state.oracleArJobId;
-    const worker = new Worker(`./oracle-ar-worker.js?v=3.6.0`);
+    const worker = new Worker(`./oracle-ar-worker.js?v=4.1.0`);
     state.oracleArWorker = worker;
 
     return new Promise((resolve, reject) => {
@@ -511,7 +552,7 @@
     if (policy.blocked) return Promise.reject(new Error(policy.message));
     terminateOptimizeWorker();
     const jobId = state.optimizeJobId;
-    const worker = new Worker(`./optimize-worker.js?v=3.6.0`);
+    const worker = new Worker(`./optimize-worker.js?v=4.1.0`);
     state.optimizeWorker = worker;
 
     return new Promise(async (resolve, reject) => {
@@ -863,6 +904,27 @@
     setStatus(`คืนค่า Recommended Work Type ให้ ${formatNumber(filtered.length)} รายการแล้ว`, "success", 0);
   }
 
+  function updateCategory(category) {
+    if (state.busy) return;
+    const normalized = category || "all";
+    for (const button of els.categoryButtons) {
+      const active = button.dataset.category === normalized;
+      button.classList.toggle("active", active);
+      button.setAttribute("aria-pressed", String(active));
+    }
+
+    let firstVisible = null;
+    let activeVisible = false;
+    for (const card of els.modeCards) {
+      const visible = normalized === "all" || card.dataset.category === normalized;
+      card.classList.toggle("category-hidden", !visible);
+      if (visible && !firstVisible) firstVisible = card;
+      if (visible && card.dataset.mode === state.mode) activeVisible = true;
+    }
+
+    if (!activeVisible && firstVisible) updateMode(firstVisible.dataset.mode);
+  }
+
   function updateMode(mode) {
     if (state.busy || !MODES[mode]) return;
     state.mode = mode;
@@ -888,12 +950,15 @@
     els.optimizeOptions.classList.toggle("hidden", mode !== "optimizeExcel");
     els.budgetBuilderOptions.classList.toggle("hidden", mode !== "budgetBuilder");
     els.oracleArOptions.classList.toggle("hidden", mode !== "oracleArCleaner");
+    els.pdfCompressOptions.classList.toggle("hidden", mode !== "compressPdf");
+    els.pdfPageToolsOptions.classList.toggle("hidden", mode !== "pdfPageTools");
     if (mode === "budgetBuilder") populateBudgetWorkTypes();
     const usesPageRange = mode === "pdf2excel" || mode === "ocr2excel";
     document.body.classList.toggle("pdf-mode", config.kind === "pdf" && !usesPageRange);
     els.pageRangePanel.classList.toggle("hidden", !usesPageRange);
     if (!usesPageRange) { els.pageStart.value = ""; els.pageEnd.value = ""; }
     updateOptimizeOptionState();
+    updatePdfPageToolsOptions();
 
     resetFiles();
   }
@@ -938,6 +1003,7 @@
 
   function clearPdfState() {
     state.pages = [];
+    state.pageSelection.clear();
     state.thumbCache.clear();
     state.pdfjsDocs.forEach((entry) => {
       Promise.resolve(entry).then((doc) => doc && doc.destroy && doc.destroy()).catch(() => {});
@@ -958,6 +1024,8 @@
       if (state.mode === "optimizeExcel") throw new Error("Optimize Excel รองรับครั้งละ 1 ไฟล์เท่านั้น");
       if (state.mode === "budgetBuilder") throw new Error("Budget Builder รองรับครั้งละ 1 ไฟล์เท่านั้น");
       if (state.mode === "oracleArCleaner") throw new Error("Oracle AR Statement Cleaner รองรับครั้งละ 1 ไฟล์เท่านั้น");
+      if (state.mode === "compressPdf") throw new Error("Compress PDF รองรับครั้งละ 1 ไฟล์เท่านั้น");
+      if (state.mode === "pdfPageTools") throw new Error("PDF Page Tools รองรับครั้งละ 1 ไฟล์เท่านั้น");
       throw new Error(config.kind === "pdf" ? "Split PDF รองรับครั้งละ 1 ไฟล์เท่านั้น" : "Split File รองรับครั้งละ 1 ไฟล์เท่านั้น");
     }
     return valid;
@@ -1035,7 +1103,7 @@
       state.optimizeAnalysisError = "";
       state.optimizeReport = null;
       clearPdfState();
-      if (state.mode === "mergePdf") buildPdfPages();
+      if (state.mode === "mergePdf" || state.mode === "pdfPageTools") buildPdfPages();
       renderFiles();
 
       if (state.mode === "optimizeExcel") {
@@ -1050,6 +1118,12 @@
       } else if (state.mode === "oracleArCleaner") {
         els.outputName.value = `${ExcelOps.basename(files[0].name)}_Clean_By_Customer.xlsx`;
         await analyzeOracleArFile(files[0]);
+      } else if (state.mode === "compressPdf") {
+        els.outputName.value = `${PdfOps.basename(files[0].name)}_compressed.pdf`;
+        setStatus("อ่าน PDF เรียบร้อย พร้อมลดขนาด", "success", 0);
+      } else if (state.mode === "pdfPageTools") {
+        els.outputName.value = `${PdfOps.basename(files[0].name)}_edited.pdf`;
+        setStatus(`อ่าน PDF เรียบร้อย ${state.pages.length} หน้า · พร้อมจัดหน้า`, "success", 0);
       } else {
         setStatus("อ่านไฟล์เรียบร้อย พร้อมประมวลผล", "success", 0);
       }
@@ -1088,7 +1162,8 @@
 
   function renderFiles() {
     const config = currentConfig();
-    const totalUnits = state.parsed.reduce((sum, item) => sum + (item.unitCount || 0), 0);
+    const sourceUnits = state.parsed.reduce((sum, item) => sum + (item.unitCount || 0), 0);
+    const totalUnits = state.mode === "pdfPageTools" && state.pages.length ? state.pages.length : sourceUnits;
     const totalBytes = state.files.reduce((sum, file) => sum + file.size, 0);
     els.fileCount.textContent = String(state.files.length);
     els.unitCount.textContent = String(totalUnits);
@@ -1130,7 +1205,7 @@
     renderPageGrid();
 
     let ready;
-    if (state.mode === "mergePdf") {
+    if (state.mode === "mergePdf" || state.mode === "pdfPageTools") {
       ready = state.pages.length >= 1;
     } else if (state.mode === "optimizeExcel") {
       ready = state.parsed.length === 1 && !!state.optimizeAnalysis;
@@ -1146,10 +1221,11 @@
 
   function buildPdfPages() {
     state.pages = [];
+    state.pageSelection.clear();
     state.parsed.forEach((ref) => {
       const count = ref.unitCount || (ref.pdfDoc ? ref.pdfDoc.getPageCount() : 0);
       for (let p = 0; p < count; p += 1) {
-        state.pages.push({ id: `${ref.uid}_${p}`, ref, pageIndex: p });
+        state.pages.push({ id: `page_${++state.pageUid}`, ref, pageIndex: p, rotation: 0 });
       }
     });
   }
@@ -1167,36 +1243,59 @@
   }
 
   function renderPageGrid() {
-    const isMergePdf = state.mode === "mergePdf" && state.pages.length > 0;
-    els.pageGrid.classList.toggle("hidden", !isMergePdf);
-    if (!isMergePdf) {
+    const isPageEditor = (state.mode === "mergePdf" || state.mode === "pdfPageTools") && state.pages.length > 0;
+    const pageToolsMode = state.mode === "pdfPageTools";
+    els.pageGrid.classList.toggle("hidden", !isPageEditor);
+    if (!isPageEditor) {
       els.pageGridList.innerHTML = "";
       return;
     }
 
-    els.pageGridCount.textContent = `${state.pages.length} หน้า`;
+    els.pageGridCount.textContent = `${state.pages.length} หน้า${pageToolsMode && state.pageSelection.size ? ` · เลือก ${state.pageSelection.size}` : ""}`;
     els.pageGridList.innerHTML = "";
     const lastIndex = state.pages.length - 1;
 
     state.pages.forEach((page, index) => {
       const card = document.createElement("div");
-      card.className = "page-card";
+      card.className = `page-card${state.pageSelection.has(page.id) ? " selected" : ""}`;
       card.draggable = !state.busy;
       card.dataset.id = page.id;
-      const cacheKey = `${page.ref.uid}:${page.pageIndex}`;
-      const cached = state.thumbCache.get(cacheKey);
-      const thumb = cached
-        ? `<img class="page-thumb" src="${cached}" alt="" />`
-        : `<canvas class="page-thumb" data-cache="${cacheKey}" data-ref="${page.ref.uid}" data-page="${page.pageIndex}"></canvas>`;
+
+      let thumb;
+      let label;
+      if (page.blank) {
+        thumb = `<div class="page-thumb blank-page-thumb"><span>Blank</span></div>`;
+        label = "Blank page";
+      } else {
+        const cacheKey = `${page.ref.uid}:${page.pageIndex}`;
+        const cached = state.thumbCache.get(cacheKey);
+        thumb = cached
+          ? `<img class="page-thumb" src="${cached}" alt="" />`
+          : `<canvas class="page-thumb" data-cache="${cacheKey}" data-ref="${page.ref.uid}" data-page="${page.pageIndex}"></canvas>`;
+        label = `${escapeHtml(page.ref.name)} · น.${page.pageIndex + 1}`;
+      }
+
+      const rotate = Number(page.rotation) || 0;
+      const selectionControl = pageToolsMode
+        ? `<label class="page-select" title="เลือกหน้านี้สำหรับ Extract"><input class="page-select-input" type="checkbox" data-id="${page.id}" ${state.pageSelection.has(page.id) ? "checked" : ""} /><span>เลือก</span></label>`
+        : "";
+      const toolActions = pageToolsMode
+        ? `<button class="page-rotate-left" type="button" data-id="${page.id}" aria-label="หมุนซ้าย">↶</button>
+           <button class="page-rotate-right" type="button" data-id="${page.id}" aria-label="หมุนขวา">↷</button>
+           <button class="page-duplicate" type="button" data-id="${page.id}" aria-label="ทำสำเนาหน้านี้">⧉</button>`
+        : "";
+
       card.innerHTML = `
-        ${thumb}
+        <div class="page-thumb-wrap" style="--page-rotation:${rotate}deg">${thumb}</div>
         <div class="page-bar">
           <span class="page-pos">${index + 1}</span>
-          <span class="page-label" title="${escapeHtml(page.ref.name)} · หน้า ${page.pageIndex + 1}">${escapeHtml(page.ref.name)} · น.${page.pageIndex + 1}</span>
+          <span class="page-label" title="${label.replaceAll('"', '&quot;')}">${label}${rotate ? ` · ${PdfOps.normalizeRotation(rotate)}°` : ""}</span>
         </div>
-        <div class="page-actions">
+        ${selectionControl}
+        <div class="page-actions ${pageToolsMode ? "page-tools-actions" : ""}">
           <button class="page-prev" type="button" data-id="${page.id}" ${index === 0 ? "disabled" : ""} aria-label="เลื่อนซ้าย">‹</button>
           <button class="page-next" type="button" data-id="${page.id}" ${index === lastIndex ? "disabled" : ""} aria-label="เลื่อนขวา">›</button>
+          ${toolActions}
           <button class="page-remove" type="button" data-id="${page.id}" aria-label="ลบหน้านี้">×</button>
         </div>
       `;
@@ -1259,8 +1358,73 @@
   function removePage(id) {
     if (state.busy) return;
     state.pages = state.pages.filter((p) => p.id !== id);
+    state.pageSelection.delete(id);
     renderFiles();
     setStatus(state.pages.length ? `เหลือ ${state.pages.length} หน้า` : "ไม่เหลือหน้าให้รวม กรุณาเลือกไฟล์ใหม่", "idle", 0);
+  }
+
+  function rotatePage(id, delta) {
+    if (state.busy) return;
+    const page = state.pages.find((item) => item.id === id);
+    if (!page) return;
+    page.rotation = PdfOps.normalizeRotation((Number(page.rotation) || 0) + delta);
+    renderPageGrid();
+    setStatus(`หมุนหน้าเป็น ${page.rotation}° แล้ว · ยังไม่ได้แก้ไฟล์ต้นฉบับ`, "idle", 0);
+  }
+
+  function duplicatePage(id) {
+    if (state.busy) return;
+    const index = state.pages.findIndex((item) => item.id === id);
+    if (index < 0) return;
+    const original = state.pages[index];
+    const copy = { ...original, id: `page_${++state.pageUid}` };
+    state.pages.splice(index + 1, 0, copy);
+    renderFiles();
+    setStatus(`Duplicate หน้า ${index + 1} แล้ว · รวม ${state.pages.length} หน้า`, "idle", 0);
+  }
+
+  function addBlankPage() {
+    if (state.busy || state.mode !== "pdfPageTools") return;
+    let width = 595.28;
+    let height = 841.89;
+    const reference = state.pages.find((page) => !page.blank && page.ref && page.ref.pdfDoc);
+    if (reference) {
+      try {
+        const size = reference.ref.pdfDoc.getPage(reference.pageIndex).getSize();
+        width = size.width;
+        height = size.height;
+      } catch (error) {
+        // Fall back to A4 when source page size cannot be read.
+      }
+    }
+    state.pages.push({ id: `page_${++state.pageUid}`, blank: true, width, height, rotation: 0 });
+    renderFiles();
+    setStatus(`เพิ่ม Blank page แล้ว · ใช้ขนาด ${Math.round(width)} × ${Math.round(height)} pt`, "idle", 0);
+  }
+
+  function setPageSelected(id, selected) {
+    if (selected) state.pageSelection.add(id);
+    else state.pageSelection.delete(id);
+    renderPageGrid();
+  }
+
+  function pagePlanFromState(pages = state.pages) {
+    return pages.map((page) => page.blank
+      ? { blank: true, width: page.width, height: page.height, rotation: page.rotation || 0 }
+      : { srcDoc: page.ref.pdfDoc, pageIndex: page.pageIndex, rotation: page.rotation || 0 });
+  }
+
+  function updatePdfPageToolsOptions() {
+    if (!els.pdfPageToolsAction) return;
+    const action = els.pdfPageToolsAction.value;
+    els.pdfSplitEveryNField.classList.toggle("hidden", action !== "everyN");
+    if (state.mode === "pdfPageTools") {
+      const config = currentConfig();
+      els.processButton.textContent = action === "extract" ? "Extract selected pages"
+        : action === "oddEven" ? "Split odd / even"
+          : action === "everyN" ? "Split every N pages"
+            : config.button;
+    }
   }
 
   function escapeHtml(value) {
@@ -1559,6 +1723,190 @@
     return `สร้าง ${outputName} เรียบร้อย · ${formatNumber(result.report.customers)} ลูกค้า · ${formatNumber(result.report.transactionRows)} Transactions · ${formatNumber(result.report.outputSheets)} Sheets`;
   }
 
+
+  function getPdfCompressionOptions() {
+    const profile = els.pdfCompressProfile ? els.pdfCompressProfile.value : "safe";
+    const presets = {
+      safe: { rasterize: false, dpi: 0, quality: 1, label: "Safe Optimize" },
+      email: { rasterize: true, dpi: 120, quality: 0.72, label: "Email" },
+      strong: { rasterize: true, dpi: 96, quality: 0.58, label: "Strong" },
+      max: { rasterize: true, dpi: 72, quality: 0.45, label: "Max Reduction" },
+    };
+    const preset = presets[profile] || presets.safe;
+    return {
+      profile,
+      ...preset,
+      grayscale: Boolean(els.pdfCompressGrayscale && els.pdfCompressGrayscale.checked),
+      keepSmaller: !els.pdfKeepSmaller || els.pdfKeepSmaller.checked,
+      maxPages: Math.max(1, Math.min(500, Number(els.pdfCompressMaxPages && els.pdfCompressMaxPages.value) || 200)),
+    };
+  }
+
+  function canvasToBytes(canvas, type = "image/jpeg", quality = 0.72) {
+    return new Promise((resolve, reject) => {
+      canvas.toBlob((blob) => {
+        if (!blob) {
+          reject(new Error("ไม่สามารถแปลงหน้า PDF เป็นภาพได้"));
+          return;
+        }
+        blob.arrayBuffer().then((buffer) => resolve(new Uint8Array(buffer))).catch(reject);
+      }, type, quality);
+    });
+  }
+
+  function convertCanvasToGrayscale(canvas) {
+    const ctx = canvas.getContext("2d", { willReadFrequently: true });
+    const image = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const data = image.data;
+    for (let i = 0; i < data.length; i += 4) {
+      const gray = Math.round((data[i] * 0.299) + (data[i + 1] * 0.587) + (data[i + 2] * 0.114));
+      data[i] = gray;
+      data[i + 1] = gray;
+      data[i + 2] = gray;
+    }
+    ctx.putImageData(image, 0, 0);
+  }
+
+  async function compressPdfAsImages(ref, options) {
+    if (!PDFJS) throw new Error("โหลด PDF.js ไม่สำเร็จ กรุณารีเฟรชหน้าเว็บ");
+    const sourcePdf = ref.pdfDoc;
+    const totalPages = sourcePdf.getPageCount();
+    if (totalPages > options.maxPages) {
+      throw new Error(`PDF นี้มี ${totalPages} หน้า เกินค่า Page limit safety (${options.maxPages} หน้า) กรุณาเพิ่ม limit หรือแบ่งไฟล์ก่อน`);
+    }
+    const pdfjsDoc = await getPdfjsDoc(ref);
+    const output = await PDFLib.PDFDocument.create();
+    const targetScale = Math.max(0.8, options.dpi / 72);
+    const maxPixels = 10000000;
+
+    for (let index = 0; index < totalPages; index += 1) {
+      setStatus(`กำลังบีบอัดหน้า ${index + 1}/${totalPages}...`, "working", 8 + ((index + 1) / totalPages) * 82);
+      const pdfjsPage = await pdfjsDoc.getPage(index + 1);
+      const page = sourcePdf.getPage(index);
+      const pageSize = page.getSize();
+      const baseViewport = pdfjsPage.getViewport({ scale: targetScale });
+      const pixels = baseViewport.width * baseViewport.height;
+      const safeScale = pixels > maxPixels ? targetScale * Math.sqrt(maxPixels / pixels) : targetScale;
+      const viewport = pdfjsPage.getViewport({ scale: safeScale });
+
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.max(1, Math.ceil(viewport.width));
+      canvas.height = Math.max(1, Math.ceil(viewport.height));
+      const ctx = canvas.getContext("2d", { alpha: false });
+      ctx.save();
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.restore();
+      await pdfjsPage.render({ canvasContext: ctx, viewport, background: "#ffffff" }).promise;
+      if (options.grayscale) convertCanvasToGrayscale(canvas);
+      const jpgBytes = await canvasToBytes(canvas, "image/jpeg", options.quality);
+      canvas.width = 0;
+      canvas.height = 0;
+
+      const jpg = await output.embedJpg(jpgBytes);
+      const outPage = output.addPage([pageSize.width, pageSize.height]);
+      outPage.drawImage(jpg, { x: 0, y: 0, width: pageSize.width, height: pageSize.height });
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    }
+    return output.save({ useObjectStreams: true, addDefaultPage: false });
+  }
+
+  async function processCompressPdf() {
+    const ref = state.parsed[0];
+    if (!ref || !ref.bytes) throw new Error("กรุณาเลือก PDF ก่อน");
+    const options = getPdfCompressionOptions();
+    const originalBytes = ref.bytes;
+    let outputBytes;
+
+    if (!options.rasterize) {
+      setStatus("กำลัง Optimize โครงสร้าง PDF แบบ Safe...", "working", 60);
+      outputBytes = await PdfOps.optimizePdfStructure(PDFLib, originalBytes);
+    } else {
+      outputBytes = await compressPdfAsImages(ref, options);
+    }
+
+    let finalBytes = outputBytes;
+    let usedOriginal = false;
+    if (options.keepSmaller && outputBytes.length >= originalBytes.length) {
+      finalBytes = await PdfOps.optimizePdfStructure(PDFLib, originalBytes);
+      if (finalBytes.length >= outputBytes.length) finalBytes = outputBytes;
+      if (finalBytes.length >= originalBytes.length) {
+        finalBytes = originalBytes;
+        usedOriginal = true;
+      }
+    }
+
+    const outputName = ensureExtension(els.outputName.value || `${PdfOps.basename(ref.name)}_compressed.pdf`, "pdf");
+    downloadBlob(new Blob([finalBytes], { type: "application/pdf" }), outputName);
+    const reduction = originalBytes.length > 0
+      ? Math.max(-999, ((originalBytes.length - finalBytes.length) / originalBytes.length) * 100)
+      : 0;
+    const modeText = usedOriginal ? "ผลลัพธ์ไม่เล็กกว่าเดิม จึงคงไฟล์เดิมไว้" : `${options.label}${options.grayscale ? " + Grayscale" : ""}`;
+    return `${outputName} เรียบร้อย · ${modeText} · ${formatBytes(originalBytes.length)} → ${formatBytes(finalBytes.length)} (${reduction >= 0 ? "ลด" : "เพิ่ม"} ${Math.abs(reduction).toFixed(1)}%)`;
+  }
+
+  async function processPdfPageTools() {
+    if (!state.pages.length) throw new Error("ไม่เหลือหน้า PDF สำหรับ Export");
+    const action = els.pdfPageToolsAction ? els.pdfPageToolsAction.value : "edited";
+    const baseName = PdfOps.sanitizeFilename(String(els.outputName.value || "edited_pages").replace(/\.pdf$/i, "").replace(/\.zip$/i, ""), "edited_pages");
+
+    if (action === "extract") {
+      const selected = state.pages.filter((page) => state.pageSelection.has(page.id));
+      if (!selected.length) throw new Error("กรุณาเลือกอย่างน้อย 1 หน้าใน Preview ก่อน Extract");
+      setStatus(`กำลัง Extract ${selected.length} หน้า...`, "working", 55);
+      const bytes = await PdfOps.buildPdfFromPagePlan(PDFLib, pagePlanFromState(selected), (done, total) => {
+        setStatus(`กำลังสร้างหน้า ${done}/${total}`, "working", 55 + (done / total) * 40);
+      });
+      const outputName = ensureExtension(baseName, "pdf");
+      downloadBlob(new Blob([bytes], { type: "application/pdf" }), outputName);
+      return `Extract ${selected.length} หน้าเป็น ${outputName} เรียบร้อย`;
+    }
+
+    if (action === "oddEven") {
+      const groups = PdfOps.splitPagePlanOddEven(state.pages);
+      const zip = new JSZip();
+      const jobs = [
+        ["odd", groups.odd],
+        ["even", groups.even],
+      ].filter(([, pages]) => pages.length > 0);
+      for (let index = 0; index < jobs.length; index += 1) {
+        const [label, pages] = jobs[index];
+        setStatus(`กำลังสร้าง ${label === "odd" ? "หน้าคี่" : "หน้าคู่"}...`, "working", 55 + index * 18);
+        const bytes = await PdfOps.buildPdfFromPagePlan(PDFLib, pagePlanFromState(pages));
+        zip.file(`${baseName}_${label}.pdf`, bytes);
+      }
+      const outputName = `${baseName}_odd_even.zip`;
+      const blob = await zip.generateAsync({ type: "blob", compression: "DEFLATE", compressionOptions: { level: 6 } });
+      downloadBlob(blob, outputName);
+      return `แยกหน้าคี่ ${groups.odd.length} หน้า / หน้าคู่ ${groups.even.length} หน้าใน ${outputName}`;
+    }
+
+    if (action === "everyN") {
+      const everyN = Math.max(1, Math.min(500, Number(els.pdfSplitEveryN && els.pdfSplitEveryN.value) || 10));
+      const chunks = PdfOps.splitPagePlanByCount(state.pages, everyN);
+      const zip = new JSZip();
+      const digits = Math.max(2, String(chunks.length).length);
+      for (let index = 0; index < chunks.length; index += 1) {
+        setStatus(`กำลังสร้างชุด ${index + 1}/${chunks.length}`, "working", 50 + ((index + 1) / chunks.length) * 40);
+        const bytes = await PdfOps.buildPdfFromPagePlan(PDFLib, pagePlanFromState(chunks[index]));
+        zip.file(`${baseName}_part_${String(index + 1).padStart(digits, "0")}.pdf`, bytes);
+        await new Promise((resolve) => setTimeout(resolve, 0));
+      }
+      const outputName = `${baseName}_split_${everyN}_pages.zip`;
+      const blob = await zip.generateAsync({ type: "blob", compression: "DEFLATE", compressionOptions: { level: 6 } });
+      downloadBlob(blob, outputName);
+      return `แบ่ง ${state.pages.length} หน้าเป็น ${chunks.length} ไฟล์ (ทุก ${everyN} หน้า) ใน ${outputName}`;
+    }
+
+    setStatus(`กำลังสร้าง PDF ${state.pages.length} หน้า...`, "working", 55);
+    const bytes = await PdfOps.buildPdfFromPagePlan(PDFLib, pagePlanFromState(), (done, total) => {
+      setStatus(`กำลังสร้างหน้า ${done}/${total}`, "working", 55 + (done / total) * 40);
+    });
+    const outputName = ensureExtension(baseName, "pdf");
+    downloadBlob(new Blob([bytes], { type: "application/pdf" }), outputName);
+    return `บันทึก PDF ${state.pages.length} หน้าเป็น ${outputName} เรียบร้อย`;
+  }
+
   async function processOptimizeExcel() {
     const file = state.files[0];
     if (!file || !state.optimizeAnalysis) throw new Error("กรุณาเลือกและรอวิเคราะห์ไฟล์ Excel ก่อน");
@@ -1585,7 +1933,7 @@
 
   async function processFiles() {
     const config = currentConfig();
-    const ready = state.mode === "mergePdf"
+    const ready = state.mode === "mergePdf" || state.mode === "pdfPageTools"
       ? state.pages.length >= 1
       : state.mode === "optimizeExcel"
         ? state.parsed.length === 1 && !!state.optimizeAnalysis
@@ -1608,6 +1956,8 @@
       else if (state.mode === "optimizeExcel") message = await processOptimizeExcel();
       else if (state.mode === "budgetBuilder") message = await processBudgetBuilder();
       else if (state.mode === "oracleArCleaner") message = await processOracleArCleaner();
+      else if (state.mode === "compressPdf") message = await processCompressPdf();
+      else if (state.mode === "pdfPageTools") message = await processPdfPageTools();
       else if (state.mode === "mergePdf") message = await processMergePdf();
       else message = await processSplitPdf();
       setStatus(message, "success", 100);
@@ -1623,9 +1973,11 @@
       els.cancelButton.classList.add("hidden");
       els.processButton.textContent = config.button;
       renderFiles();
+      updatePdfPageToolsOptions();
     }
   }
 
+  els.categoryButtons.forEach((button) => button.addEventListener("click", () => updateCategory(button.dataset.category)));
   els.modeCards.forEach((card) => card.addEventListener("click", () => updateMode(card.dataset.mode)));
   els.fileInput.addEventListener("change", (event) => addFiles(event.target.files));
   els.resetButton.addEventListener("click", resetFiles);
@@ -1666,7 +2018,28 @@
     if (prevBtn) { movePage(prevBtn.dataset.id, -1); return; }
     const nextBtn = event.target.closest(".page-next");
     if (nextBtn) { movePage(nextBtn.dataset.id, 1); return; }
+    const rotateLeft = event.target.closest(".page-rotate-left");
+    if (rotateLeft) { rotatePage(rotateLeft.dataset.id, -90); return; }
+    const rotateRight = event.target.closest(".page-rotate-right");
+    if (rotateRight) { rotatePage(rotateRight.dataset.id, 90); return; }
+    const duplicate = event.target.closest(".page-duplicate");
+    if (duplicate) { duplicatePage(duplicate.dataset.id); }
   });
+  els.pageGridList.addEventListener("change", (event) => {
+    const checkbox = event.target.closest(".page-select-input");
+    if (checkbox) setPageSelected(checkbox.dataset.id, checkbox.checked);
+  });
+
+  if (els.pdfPageToolsAction) els.pdfPageToolsAction.addEventListener("change", updatePdfPageToolsOptions);
+  if (els.pdfSelectAll) els.pdfSelectAll.addEventListener("click", () => {
+    state.pages.forEach((page) => state.pageSelection.add(page.id));
+    renderPageGrid();
+  });
+  if (els.pdfClearSelection) els.pdfClearSelection.addEventListener("click", () => {
+    state.pageSelection.clear();
+    renderPageGrid();
+  });
+  if (els.pdfAddBlank) els.pdfAddBlank.addEventListener("click", addBlankPage);
 
   let dragPageId = null;
   els.pageGridList.addEventListener("dragstart", (event) => {
