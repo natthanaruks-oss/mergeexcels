@@ -45,6 +45,19 @@
       dropHint: "รองรับ .xlsx, .xls, .xlsm และ .xlsb",
       unitLabel: "Sheet",
     },
+    excelCleaner: {
+      kind: "excel",
+      eyebrow: "EXCEL CLEANER",
+      title: "วิเคราะห์และทำความสะอาด Excel",
+      description: "เลือกสิ่งที่จะทำความสะอาดจากผล Analyze ก่อน Export — ไฟล์ต้นฉบับไม่ถูกแก้ไข",
+      button: "สร้าง Clean Excel",
+      output: "cleaned_workbook.xlsx",
+      extension: "xlsx",
+      multiple: false,
+      dropTitle: "เลือก Excel 1 ไฟล์ที่ต้องการ Analyze และ Clean",
+      dropHint: "รองรับ .xlsx, .xls, .xlsm และ .xlsb · เหมาะกับ Raw Data / Export จากระบบ",
+      unitLabel: "Sheet",
+    },
     mergePdf: {
       kind: "pdf",
       eyebrow: "MERGE PDF FILES",
@@ -343,6 +356,22 @@
     batchRenamePreview: document.getElementById("batchRenamePreview"),
     batchRenameSummary: document.getElementById("batchRenameSummary"),
     batchRenameWarning: document.getElementById("batchRenameWarning"),
+    excelCleanerOptions: document.getElementById("excelCleanerOptions"),
+    excelCleanerAnalyze: document.getElementById("excelCleanerAnalyze"),
+    excelCleanerAnalysis: document.getElementById("excelCleanerAnalysis"),
+    cleanTrimSpaces: document.getElementById("cleanTrimSpaces"),
+    cleanBlankRows: document.getElementById("cleanBlankRows"),
+    cleanBlankCols: document.getElementById("cleanBlankCols"),
+    cleanDuplicates: document.getElementById("cleanDuplicates"),
+    cleanUnmerge: document.getElementById("cleanUnmerge"),
+    cleanFillDown: document.getElementById("cleanFillDown"),
+    cleanFormulaValues: document.getElementById("cleanFormulaValues"),
+    cleanNumbers: document.getElementById("cleanNumbers"),
+    cleanDates: document.getElementById("cleanDates"),
+    cleanHidden: document.getElementById("cleanHidden"),
+    cleanExternalLinks: document.getElementById("cleanExternalLinks"),
+    cleanFilters: document.getElementById("cleanFilters"),
+    cleanFormatting: document.getElementById("cleanFormatting"),
     pageGridTitle: document.getElementById("pageGridTitle"),
     pageGridHint: document.getElementById("pageGridHint"),
     budgetAgency: document.getElementById("budgetAgency"),
@@ -539,7 +568,7 @@
     if (!state.oracleArBuffer) return Promise.reject(new Error("ไม่พบข้อมูลไฟล์ Oracle AR กรุณาเลือกไฟล์ใหม่"));
     terminateOracleArWorker();
     const jobId = state.oracleArJobId;
-    const worker = new Worker(`./oracle-ar-worker.js?v=4.5.0`);
+    const worker = new Worker(`./oracle-ar-worker.js?v=4.6.0`);
     state.oracleArWorker = worker;
 
     return new Promise((resolve, reject) => {
@@ -658,7 +687,7 @@
     if (policy.blocked) return Promise.reject(new Error(policy.message));
     terminateOptimizeWorker();
     const jobId = state.optimizeJobId;
-    const worker = new Worker(`./optimize-worker.js?v=4.5.0`);
+    const worker = new Worker(`./optimize-worker.js?v=4.6.0`);
     state.optimizeWorker = worker;
 
     return new Promise(async (resolve, reject) => {
@@ -1062,6 +1091,7 @@
     if (els.imageToPdfOptions) els.imageToPdfOptions.classList.toggle("hidden", mode !== "imageToPdf");
     if (els.pdfScanCleanupOptions) els.pdfScanCleanupOptions.classList.toggle("hidden", mode !== "pdfScanCleanup");
     if (els.batchRenameOptions) els.batchRenameOptions.classList.toggle("hidden", mode !== "batchRename");
+    if (els.excelCleanerOptions) els.excelCleanerOptions.classList.toggle("hidden", mode !== "excelCleaner");
     if (mode === "budgetBuilder") populateBudgetWorkTypes();
     const usesPageRange = mode === "pdf2excel" || mode === "ocr2excel";
     document.body.classList.toggle("pdf-mode", config.kind === "pdf" && !usesPageRange);
@@ -1282,6 +1312,10 @@
         els.outputName.value = "renamed_files.zip";
         updateBatchRenamePreview();
         setStatus(`เลือกแล้ว ${state.parsed.length} ไฟล์ · ตรวจ Rename Preview ก่อนสร้าง ZIP`, "success", 0);
+      } else if (state.mode === "excelCleaner") {
+        els.outputName.value = `${ExcelOps.basename(files[0].name)}_cleaned.xlsx`;
+        analyzeExcelCleaner();
+        setStatus("วิเคราะห์ Workbook เรียบร้อย · เลือก Cleanup Options แล้วสร้างไฟล์ใหม่", "success", 0);
       } else {
         setStatus("อ่านไฟล์เรียบร้อย พร้อมประมวลผล", "success", 0);
       }
@@ -2468,6 +2502,111 @@
     return `${outputName} เรียบร้อย · ${plan.length} ไฟล์ · ไม่พบชื่อซ้ำ · มี rename_log.csv`;
   }
 
+
+  function excelCleanerOptions() {
+    return {
+      trimSpaces: !!els.cleanTrimSpaces?.checked,
+      removeBlankRows: !!els.cleanBlankRows?.checked,
+      removeBlankCols: !!els.cleanBlankCols?.checked,
+      removeDuplicates: !!els.cleanDuplicates?.checked,
+      unmerge: !!els.cleanUnmerge?.checked,
+      fillDown: !!els.cleanFillDown?.checked,
+      formulaValues: !!els.cleanFormulaValues?.checked,
+      standardizeNumbers: !!els.cleanNumbers?.checked,
+      standardizeDates: !!els.cleanDates?.checked,
+      removeHidden: !!els.cleanHidden?.checked,
+      removeExternalLinks: !!els.cleanExternalLinks?.checked,
+      removeFilters: !!els.cleanFilters?.checked,
+      formattingCleanup: !!els.cleanFormatting?.checked,
+    };
+  }
+
+  function analyzeExcelCleaner() {
+    if (!els.excelCleanerAnalysis || state.mode !== "excelCleaner" || !state.parsed.length || !window.ExcelCleanerOps) return;
+    const report = ExcelCleanerOps.analyzeWorkbook(state.parsed[0].workbook, XLSX);
+    const t = report.totals;
+    els.excelCleanerAnalysis.innerHTML = `
+      <div class="scan-analysis-summary"><strong>${report.sheets.length} Sheets</strong><span>${formatNumber(t.rows)} rows analyzed</span></div>
+      <div class="scan-chip-list">
+        <span class="scan-chip">Trim candidates ${formatNumber(t.trimCandidates)}</span>
+        <span class="scan-chip">Blank rows ${formatNumber(t.blankRows)}</span>
+        <span class="scan-chip">Blank cols ${formatNumber(t.blankCols)}</span>
+        <span class="scan-chip">Duplicate rows ${formatNumber(t.duplicateRows)}</span>
+        <span class="scan-chip">Formulas ${formatNumber(t.formulas)}</span>
+        <span class="scan-chip">External formulas ${formatNumber(t.externalFormulas)}</span>
+        <span class="scan-chip">Merged ranges ${formatNumber(t.merges)}</span>
+        <span class="scan-chip">Hidden rows/cols ${formatNumber(t.hiddenRows+t.hiddenCols)}</span>
+        <span class="scan-chip">Filters ${formatNumber(t.filters)}</span>
+      </div>
+      <details><summary>ดูรายละเอียดราย Sheet</summary><div class="sheet-analysis">${report.sheets.map((x)=>`<div class="sheet-row"><strong>${escapeHtml(x.name)}</strong><span>${formatNumber(x.rows)} rows · ${formatNumber(x.cols)} cols · blank ${x.blankRows}/${x.blankCols} · dup ${x.duplicateRows} · formulas ${x.formulas}</span></div>`).join("")}</div></details>`;
+    els.excelCleanerAnalysis.classList.remove("hidden");
+  }
+
+  function cellBlank(cell) {
+    return !cell || (cell.v == null && !cell.f) || (typeof cell.v === "string" && cell.v.trim() === "" && !cell.f);
+  }
+  function cellKey(cell) {
+    if (!cell) return null;
+    return cell.f ? `F:${cell.f}|V:${String(cell.v ?? "")}` : `V:${String(cell.v ?? "")}`;
+  }
+  function cloneCell(cell) { return cell ? { ...cell } : null; }
+
+  function cleanWorksheetPreservingCells(ws, options) {
+    if (!ws || !ws["!ref"]) return XLSX.utils.aoa_to_sheet([]);
+    const range = XLSX.utils.decode_range(ws["!ref"]);
+    let matrix = [];
+    for (let r=range.s.r; r<=range.e.r; r+=1) {
+      const row=[];
+      for (let c=range.s.c; c<=range.e.c; c+=1) row.push(cloneCell(ws[XLSX.utils.encode_cell({r,c})]));
+      matrix.push(row);
+    }
+    if (options.removeHidden) {
+      const hiddenRows = ws["!rows"] || [], hiddenCols = ws["!cols"] || [];
+      matrix = matrix.filter((_,i)=>!(hiddenRows[range.s.r+i] && hiddenRows[range.s.r+i].hidden));
+      const keep=[]; const width=matrix.reduce((m,r)=>Math.max(m,r.length),0);
+      for(let c=0;c<width;c+=1) if(!(hiddenCols[range.s.c+c] && hiddenCols[range.s.c+c].hidden)) keep.push(c);
+      matrix=matrix.map(row=>keep.map(c=>row[c]||null));
+    }
+    if (options.trimSpaces || options.standardizeNumbers || options.standardizeDates || options.formulaValues || options.removeExternalLinks) {
+      matrix.forEach(row=>row.forEach((cell)=>{
+        if(!cell) return;
+        if(options.trimSpaces && typeof cell.v === "string") cell.v = ExcelCleanerOps.normalizeText(cell.v);
+        if(options.standardizeNumbers && typeof cell.v === "string" && /^-?\d{1,3}(,\d{3})+(\.\d+)?$/.test(cell.v.trim())) { const n=Number(cell.v.replace(/,/g,"")); if(Number.isFinite(n)){cell.v=n;cell.t="n";} }
+        if(options.standardizeDates && typeof cell.v === "string") { const m=cell.v.trim().match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})$/); if(m){const d=Number(m[1]),mo=Number(m[2]),y=Number(m[3]);const dt=new Date(Date.UTC(y,mo-1,d));if(y>=1900&&y<=2200&&dt.getUTCFullYear()===y&&dt.getUTCMonth()===mo-1&&dt.getUTCDate()===d){cell.v=dt;cell.t="d";delete cell.w;}} }
+        if (cell.f && (options.formulaValues || (options.removeExternalLinks && /\[[^\]]+\]/.test(cell.f)))) delete cell.f;
+      }));
+    }
+    if (options.fillDown) {
+      const width=matrix.reduce((m,r)=>Math.max(m,r.length),0);
+      for(let c=0;c<width;c+=1){let last=null;for(let r=0;r<matrix.length;r+=1){const row=matrix[r];const nonBlank=row.some(x=>!cellBlank(x));if(!cellBlank(row[c])) last=cloneCell(row[c]); else if(last&&nonBlank) row[c]=cloneCell(last);}}
+    }
+    if (options.removeBlankRows) matrix=matrix.filter(row=>row.some(cell=>!cellBlank(cell)));
+    if (options.removeBlankCols && matrix.length) { const width=matrix.reduce((m,r)=>Math.max(m,r.length),0), keep=[];for(let c=0;c<width;c+=1) if(matrix.some(row=>!cellBlank(row[c]))) keep.push(c);matrix=matrix.map(row=>keep.map(c=>row[c]||null)); }
+    if (options.removeDuplicates && matrix.length>1) { const head=matrix[0], seen=new Set(), rest=[];matrix.slice(1).forEach(row=>{const k=JSON.stringify(row.map(cellKey));if(!seen.has(k)){seen.add(k);rest.push(row);}});matrix=[head,...rest]; }
+    const out={}; let maxR=-1,maxC=-1;
+    matrix.forEach((row,r)=>row.forEach((cell,c)=>{if(cell){out[XLSX.utils.encode_cell({r,c})]=cell;maxR=Math.max(maxR,r);maxC=Math.max(maxC,c);}}));
+    out["!ref"] = maxR>=0 ? XLSX.utils.encode_range({s:{r:0,c:0},e:{r:maxR,c:maxC}}) : "A1";
+    if (!options.unmerge && !options.removeBlankRows && !options.removeBlankCols && !options.removeHidden && ws["!merges"]) out["!merges"] = ws["!merges"].map(m=>({...m,s:{...m.s},e:{...m.e}}));
+    if (!options.removeFilters && ws["!autofilter"] && !options.removeBlankRows && !options.removeBlankCols && !options.removeHidden) out["!autofilter"]={...ws["!autofilter"]};
+    if (!options.formattingCleanup) {
+      if (ws["!cols"] && !options.removeBlankCols && !options.removeHidden) out["!cols"] = ws["!cols"].map(x=>x?{...x}:x);
+      if (ws["!rows"] && !options.removeBlankRows && !options.removeHidden) out["!rows"] = ws["!rows"].map(x=>x?{...x}:x);
+    } else {
+      Object.keys(out).forEach(addr=>{if(addr[0]!=="!"&&out[addr]&&out[addr].s) delete out[addr].s;});
+    }
+    return out;
+  }
+
+  async function processExcelCleaner() {
+    if (!state.parsed.length) throw new Error("กรุณาเลือก Excel ก่อน");
+    const source=state.parsed[0].workbook, options=excelCleanerOptions();
+    const wb=XLSX.utils.book_new();
+    source.SheetNames.forEach((name)=>XLSX.utils.book_append_sheet(wb, cleanWorksheetPreservingCells(source.Sheets[name], options), name));
+    const outputName=ensureExtension(els.outputName.value || `${ExcelOps.basename(state.files[0].name)}_cleaned.xlsx`, "xlsx");
+    XLSX.writeFile(wb, outputName, {bookType:"xlsx",compression:true,cellStyles:!options.formattingCleanup});
+    return `${outputName} เรียบร้อย · ${source.SheetNames.length} Sheets · ต้นฉบับไม่ได้ถูกแก้ไข`;
+  }
+
   async function processFiles() {
     const config = currentConfig();
     const ready = state.mode === "mergePdf" || state.mode === "pdfPageTools" || state.mode === "pdfWatermark"
@@ -2499,6 +2638,7 @@
       else if (state.mode === "imageToPdf") message = await processImageToPdf();
       else if (state.mode === "pdfScanCleanup") message = await processPdfScanCleanup();
       else if (state.mode === "batchRename") message = await processBatchRename();
+      else if (state.mode === "excelCleaner") message = await processExcelCleaner();
       else if (state.mode === "mergePdf") message = await processMergePdf();
       else message = await processSplitPdf();
       setStatus(message, "success", 100);
@@ -2526,6 +2666,7 @@
     els.batchDate.value = local.toISOString().slice(0, 10);
   }
 
+  if (els.excelCleanerAnalyze) els.excelCleanerAnalyze.addEventListener("click", analyzeExcelCleaner);
   els.categoryButtons.forEach((button) => button.addEventListener("click", () => updateCategory(button.dataset.category)));
   els.modeCards.forEach((card) => card.addEventListener("click", () => updateMode(card.dataset.mode)));
   els.fileInput.addEventListener("change", (event) => addFiles(event.target.files));

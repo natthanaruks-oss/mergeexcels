@@ -5,28 +5,29 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="Office Toolkit สำหรับ Excel, PDF, Conversion และ Business Data โดยประมวลผลไฟล์แบบ Local-first ในเบราว์เซอร์" />
     <title>Office Toolkit — Local-first File Utility</title>
-    <link rel="stylesheet" href="./styles.css?v=4.5.0" />
-    <script defer src="./vendor/xlsx.full.min.js?v=4.5.0"></script>
-    <script defer src="./vendor/jszip.min.js?v=4.5.0"></script>
-    <script defer src="./vendor/pdf-lib.min.js?v=4.5.0"></script>
-    <script defer src="./vendor/pdf.min.js?v=4.5.0"></script>
-    <script defer src="./excel-ops.js?v=4.5.0"></script>
-    <script defer src="./pdf-ops.js?v=4.5.0"></script>
-    <script defer src="./thai-roads-config.js?v=4.5.0"></script>
-    <script defer src="./text-correct.js?v=4.5.0"></script>
-    <script defer src="./pdftable-ops.js?v=4.5.0"></script>
-    <script defer src="./optimize-ops.js?v=4.5.0"></script>
-    <script defer src="./budget-master.js?v=4.5.0"></script>
-    <script defer src="./budget-history-rules.js?v=4.5.0"></script>
-    <script defer src="./budget-builder-ops.js?v=4.5.0"></script>
-    <script defer src="./batch-rename-ops.js?v=4.5.0"></script>
-    <script defer src="./app.js?v=4.5.0"></script>
+    <link rel="stylesheet" href="./styles.css?v=4.6.0" />
+    <script defer src="./vendor/xlsx.full.min.js?v=4.6.0"></script>
+    <script defer src="./vendor/jszip.min.js?v=4.6.0"></script>
+    <script defer src="./vendor/pdf-lib.min.js?v=4.6.0"></script>
+    <script defer src="./vendor/pdf.min.js?v=4.6.0"></script>
+    <script defer src="./excel-ops.js?v=4.6.0"></script>
+    <script defer src="./pdf-ops.js?v=4.6.0"></script>
+    <script defer src="./thai-roads-config.js?v=4.6.0"></script>
+    <script defer src="./text-correct.js?v=4.6.0"></script>
+    <script defer src="./pdftable-ops.js?v=4.6.0"></script>
+    <script defer src="./optimize-ops.js?v=4.6.0"></script>
+    <script defer src="./budget-master.js?v=4.6.0"></script>
+    <script defer src="./budget-history-rules.js?v=4.6.0"></script>
+    <script defer src="./budget-builder-ops.js?v=4.6.0"></script>
+    <script defer src="./batch-rename-ops.js?v=4.6.0"></script>
+    <script defer src="./excel-cleaner-ops.js?v=4.6.0"></script>
+    <script defer src="./app.js?v=4.6.0"></script>
   </head>
   <body>
     <header class="site-header">
       <div class="brand-mark" aria-hidden="true">O</div>
       <div class="brand-copy">
-        <div class="brand-title-row"><h1>Office Toolkit</h1><span class="version-badge">v4.5.0</span></div>
+        <div class="brand-title-row"><h1>Office Toolkit</h1><span class="version-badge">v4.6.0</span></div>
         <p>All-in-one Local Office File Utility · Excel · PDF · Conversion · Business Tools</p>
       </div>
       <span class="header-local-badge">LOCAL-FIRST</span>
@@ -40,7 +41,7 @@
             <h2 id="toolCatalogTitle">เลือกเครื่องมือที่ต้องการใช้</h2>
             <p>ฟังก์ชันเดิมทั้งหมดยังคงอยู่ เพียงจัดใหม่เป็นหมวดเพื่อให้ค้นหาและขยายระบบได้ง่ายขึ้น</p>
           </div>
-          <div class="catalog-count"><strong>14</strong><span>Tools ready</span></div>
+          <div class="catalog-count"><strong>17</strong><span>Tools ready</span></div>
         </div>
         <nav class="category-tabs" aria-label="หมวดเครื่องมือ">
           <button class="category-tab active" type="button" data-category="all" aria-pressed="true">ทั้งหมด</button>
@@ -166,6 +167,13 @@
           <small>Collision Check · Filename Cleanup · ZIP + Rename Log · Local 100%</small>
         </button>
 
+        <button class="mode-card excel-card cleaner-card" type="button" data-mode="excelCleaner" data-category="excel" aria-pressed="false">
+          <span class="mode-number">17</span>
+          <span class="mode-type">EXCEL · CLEAN</span>
+          <strong>Excel Cleaner</strong>
+          <span>วิเคราะห์และทำความสะอาด Workbook ก่อนใช้งานต่อ โดยเลือกสิ่งที่จะลบ/แปลงได้เอง</span>
+          <small>Trim · Blank Rows/Cols · Duplicates · Unmerge · Formula→Values · Hidden/Links</small>
+        </button>
 
       </section>
 
@@ -684,6 +692,35 @@
           <div id="batchRenameWarning" class="pdf-compress-note hidden"></div>
         </section>
 
+
+        <section id="excelCleanerOptions" class="options-panel excel-cleaner-panel hidden" aria-labelledby="excelCleanerTitle">
+          <div class="panel-heading">
+            <div>
+              <h3 id="excelCleanerTitle">Excel Cleaner</h3>
+              <small>Analyze ก่อน Apply · ค่าเริ่มต้นเปิดเฉพาะการทำความสะอาดที่ความเสี่ยงต่ำ · Output เป็นไฟล์ใหม่เสมอ</small>
+            </div>
+            <span class="local-badge">100% LOCAL</span>
+          </div>
+          <div class="option-check-grid">
+            <label class="check-row compact"><input id="cleanTrimSpaces" type="checkbox" checked /><span><strong>Trim spaces</strong><small>ตัดช่องว่างหัว/ท้ายและช่องว่างซ้ำในข้อความ</small></span></label>
+            <label class="check-row compact"><input id="cleanBlankRows" type="checkbox" checked /><span><strong>Remove blank rows</strong><small>ลบแถวที่ไม่มีข้อมูลทุกคอลัมน์</small></span></label>
+            <label class="check-row compact"><input id="cleanBlankCols" type="checkbox" checked /><span><strong>Remove blank columns</strong><small>ลบคอลัมน์ที่ไม่มีข้อมูลทั้ง Sheet</small></span></label>
+            <label class="check-row compact"><input id="cleanDuplicates" type="checkbox" /><span><strong>Remove duplicate rows</strong><small>ถือแถวแรกเป็น Header และลบรายการซ้ำหลังจากนั้น</small></span></label>
+            <label class="check-row compact"><input id="cleanUnmerge" type="checkbox" /><span><strong>Unmerge cells</strong><small>ยกเลิก Merge ทั้ง Sheet</small></span></label>
+            <label class="check-row compact"><input id="cleanFillDown" type="checkbox" /><span><strong>Fill down blanks</strong><small>เติมค่าจากแถวบนลงช่องว่างในแถวข้อมูล — ใช้เมื่อโครงสร้างข้อมูลเหมาะสม</small></span></label>
+            <label class="check-row compact"><input id="cleanFormulaValues" type="checkbox" /><span><strong>Formula → Values</strong><small>เก็บ cached value และลบสูตรทั้งหมด เหมาะก่อนส่งไฟล์ออก</small></span></label>
+            <label class="check-row compact"><input id="cleanNumbers" type="checkbox" /><span><strong>Standardize numbers</strong><small>แปลงข้อความรูปแบบ 1,234.50 เป็น Number เท่านั้น</small></span></label>
+            <label class="check-row compact"><input id="cleanDates" type="checkbox" /><span><strong>Standardize dates</strong><small>แปลงเฉพาะ DD/MM/YYYY หรือ DD-MM-YYYY ที่ชัดเจน</small></span></label>
+            <label class="check-row compact"><input id="cleanHidden" type="checkbox" /><span><strong>Remove hidden rows/columns</strong><small>ข้อมูลที่ซ่อนจะถูกตัดออกจาก Output</small></span></label>
+            <label class="check-row compact"><input id="cleanExternalLinks" type="checkbox" /><span><strong>Remove external-link formulas</strong><small>สูตรที่อ้าง Workbook ภายนอกจะถูกแทนด้วย cached value</small></span></label>
+            <label class="check-row compact"><input id="cleanFilters" type="checkbox" /><span><strong>Remove filters</strong><small>ลบ AutoFilter จาก Sheet</small></span></label>
+            <label class="check-row compact"><input id="cleanFormatting" type="checkbox" /><span><strong>Values-focused output</strong><small>สร้าง Sheet ใหม่จากข้อมูลที่เห็น เหมาะกับ Raw Data; formatting ขั้นสูงอาจหาย</small></span></label>
+          </div>
+          <button id="excelCleanerAnalyze" type="button" class="secondary-button">Analyze workbook</button>
+          <div id="excelCleanerAnalysis" class="scan-analysis hidden" aria-live="polite"></div>
+          <div class="pdf-compress-note"><strong>ข้อควรรู้:</strong> การลบแถว/คอลัมน์, Unmerge หรือสร้าง Values-focused output อาจทำให้ Chart, Table object, Conditional Formatting, Macro และ layout ขั้นสูงไม่ถูกเก็บครบ ควรใช้กับไฟล์ข้อมูล/Raw Data และเก็บต้นฉบับไว้เสมอ</div>
+        </section>
+
         <section id="analysisPanel" class="analysis-panel hidden" aria-labelledby="analysisTitle">
           <div class="analysis-head">
             <div>
@@ -818,6 +855,6 @@
       </section>
     </main>
 
-    <footer>Office Toolkit v4.5.0 · Local-first · ไฟล์ประมวลผลบนอุปกรณ์ของผู้ใช้</footer>
+    <footer>Office Toolkit v4.6.0 · Local-first · ไฟล์ประมวลผลบนอุปกรณ์ของผู้ใช้</footer>
   </body>
 </html>

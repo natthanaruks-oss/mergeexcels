@@ -48,3 +48,9 @@ Implemented PDF Watermark & Stamp as a separate PDF module. Uses pdf-lib standar
 - Output is a ZIP of renamed copies plus `rename_log.csv`; browser cannot rename arbitrary source files in place safely.
 - Collision detection is case-insensitive and blocks export until resolved.
 - Phase 1A–1E is now functionally complete; next roadmap target is Phase 2A Excel Cleaner after Codespaces regression/deploy verification.
+
+## 2026-08-13 — Phase 2A Excel Cleaner v4.6.0
+- Added Excel Cleaner as Tool 17 under Excel category.
+- Analyze-first UX; low-risk cleanup defaults only.
+- Structural cleanup rebuilds sheet cell matrices while retaining cell objects/formulas where possible; advanced Excel objects may not survive and the UI warns users.
+- Formula-to-values, external-link removal, hidden rows/columns and formatting cleanup remain explicit opt-in controls.

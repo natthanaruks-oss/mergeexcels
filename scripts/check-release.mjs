@@ -34,6 +34,8 @@ const requiredFiles = [
   "tests/oracle-ar-worker.test.cjs",
   "public/batch-rename-ops.js",
   "tests/batch-rename-ops.test.cjs",
+  "public/excel-cleaner-ops.js",
+  "tests/excel-cleaner-ops.test.cjs",
 ];
 
 for (const relativePath of requiredFiles) {
@@ -146,6 +148,12 @@ if (!indexHtml.includes('data-mode="batchRename"') || !app.includes('processBatc
 }
 if (!indexHtml.includes('batch-rename-ops.js') || !indexHtml.includes('batchRenamePreview')) {
   throw new Error("Batch Rename engine/options ไม่ครบ");
+}
+if (!indexHtml.includes('data-mode="excelCleaner"') || !app.includes('processExcelCleaner')) {
+  throw new Error("Phase 2A Excel Cleaner เชื่อมต่อไม่ครบ");
+}
+if (!indexHtml.includes('excel-cleaner-ops.js') || !indexHtml.includes('cleanBlankRows')) {
+  throw new Error("Excel Cleaner engine/options ไม่ครบ");
 }
 if (packageJson.dependencies?.xlsx === "0.18.5") {
   console.warn("WARNING: xlsx@0.18.5 has known security advisories; see SECURITY.md.");

@@ -63,13 +63,18 @@ Goal: daily-use utilities for general staff.
 ## Phase 2 — Excel Productivity
 Goal: reduce manual cleanup, comparison and reconciliation work.
 
-### Phase 2A — Excel Cleaner
-- Trim whitespace
-- Remove blank rows/columns
-- Remove duplicates
-- Unmerge/fill-down headers
-- Normalize date/number values
-- Values-only / remove comments / links / hidden rows-columns controls
+### Phase 2A — Excel Cleaner (v4.6.0) — IMPLEMENTED / AWAITING DEPLOYED UAT
+- [x] Analyze workbook before cleanup with sheet-level metrics
+- [x] Trim whitespace
+- [x] Remove blank rows/columns
+- [x] Remove duplicate rows (header retained)
+- [x] Unmerge / fill-down controls
+- [x] Conservative date/number normalization
+- [x] Formula → Values and external-link formula controls
+- [x] Hidden row/column and filter cleanup controls
+- [x] Values-focused formatting cleanup option
+- [x] Non-destructive output to a new XLSX file
+- [ ] Deployed browser UAT on representative raw-data workbooks
 
 ### Phase 2B — Excel Compare
 - Compare two workbooks/sheets
