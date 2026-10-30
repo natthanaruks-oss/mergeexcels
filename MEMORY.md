@@ -69,3 +69,8 @@ Implemented PDF Watermark & Stamp as a separate PDF module. Uses pdf-lib standar
 - Decisions: page range + DPI choices; one page = bare PNG, many = ZIP; white background by default with an opt-in transparent background; per-page (~36M px) and whole-export (~600M px) limits that downscale/refuse instead of crashing the browser.
 - Test-environment note: the in-app browser pane never fires requestAnimationFrame (page unfocused), which stalls PDF.js render; verification used a test-only rAF shim. Not a product defect, but real UAT must be done in a normal focused browser.
 - Next time: a module is not verified by planner unit tests alone; render through the real page.
+
+## 2026-10-30 — Tool catalog grouped by category (v4.6.2)
+- Owner pointed out categories were not tidy: cards were in build order with categories interleaved and one tool (Batch Rename) sat under Conversion.
+- Decision: group the "all" view by category with headings, add a File Utilities category for general file tools (also the future home of File Naming Standard), keep menu numbers as stable IDs because UI text and README cite them, derive the tool counter from the cards.
+- Next time: when adding a module, place it in the right group and let the product-shell grouping test catch ordering mistakes.

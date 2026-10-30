@@ -286,6 +286,7 @@
   const els = {
     modeCards: [...document.querySelectorAll(".mode-card")],
     categoryButtons: [...document.querySelectorAll(".category-tab")],
+    categoryHeadings: [...document.querySelectorAll(".category-heading")],
     modeEyebrow: document.getElementById("modeEyebrow"),
     modeTitle: document.getElementById("modeTitle"),
     modeDescription: document.getElementById("modeDescription"),
@@ -586,7 +587,7 @@
     if (!state.oracleArBuffer) return Promise.reject(new Error("ไม่พบข้อมูลไฟล์ Oracle AR กรุณาเลือกไฟล์ใหม่"));
     terminateOracleArWorker();
     const jobId = state.oracleArJobId;
-    const worker = new Worker(`./oracle-ar-worker.js?v=4.6.1`);
+    const worker = new Worker(`./oracle-ar-worker.js?v=4.6.2`);
     state.oracleArWorker = worker;
 
     return new Promise((resolve, reject) => {
@@ -705,7 +706,7 @@
     if (policy.blocked) return Promise.reject(new Error(policy.message));
     terminateOptimizeWorker();
     const jobId = state.optimizeJobId;
-    const worker = new Worker(`./optimize-worker.js?v=4.6.1`);
+    const worker = new Worker(`./optimize-worker.js?v=4.6.2`);
     state.optimizeWorker = worker;
 
     return new Promise(async (resolve, reject) => {
@@ -1065,6 +1066,9 @@
       button.classList.toggle("active", active);
       button.setAttribute("aria-pressed", String(active));
     }
+
+    // Group headings only make sense in the "all" view; a filtered view is already one group.
+    for (const heading of els.categoryHeadings) heading.classList.toggle("category-hidden", normalized !== "all");
 
     let firstVisible = null;
     let activeVisible = false;
@@ -2715,6 +2719,9 @@
   }
 
   if (els.excelCleanerAnalyze) els.excelCleanerAnalyze.addEventListener("click", analyzeExcelCleaner);
+  // The catalog counter is derived from the cards so it cannot drift from the real tool list.
+  const catalogCount = document.querySelector(".catalog-count strong");
+  if (catalogCount) catalogCount.textContent = String(els.modeCards.length);
   els.categoryButtons.forEach((button) => button.addEventListener("click", () => updateCategory(button.dataset.category)));
   els.modeCards.forEach((card) => card.addEventListener("click", () => updateMode(card.dataset.mode)));
   els.fileInput.addEventListener("change", (event) => addFiles(event.target.files));

@@ -1,6 +1,6 @@
 {
   "name": "mergeexcels",
-  "version": "4.6.1",
+  "version": "4.6.2",
   "private": true,
   "description": "Local-first all-in-one Office Toolkit for Excel, PDF, conversion and business file workflows on Cloudflare Workers Static Assets",
   "engines": {

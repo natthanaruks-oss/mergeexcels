@@ -6,9 +6,9 @@
  * เพื่อให้ปุ่ม ยกเลิก, Progress และหน้าจอยังคงตอบสนองระหว่างประมวลผล
  */
 importScripts(
-  "./vendor/xlsx.full.min.js?v=4.6.1",
-  "./vendor/jszip.min.js?v=4.6.1",
-  "./optimize-ops.js?v=4.6.1"
+  "./vendor/xlsx.full.min.js?v=4.6.2",
+  "./vendor/jszip.min.js?v=4.6.2",
+  "./optimize-ops.js?v=4.6.2"
 );
 
 function postProgress(message, progress) {
