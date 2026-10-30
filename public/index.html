@@ -3,33 +3,33 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="Office Toolkit สำหรับ Excel, PDF, Conversion และ Business Data โดยประมวลผลไฟล์แบบ Local-first ในเบราว์เซอร์" />
+    <meta name="description" content="Office Toolkit สำหรับ Excel, PDF, ไฟล์ทั่วไป และ Business Data โดยประมวลผลไฟล์แบบ Local-first ในเบราว์เซอร์" />
     <title>Office Toolkit — Local-first File Utility</title>
-    <link rel="stylesheet" href="./styles.css?v=4.6.2" />
-    <script defer src="./vendor/xlsx.full.min.js?v=4.6.2"></script>
-    <script defer src="./vendor/jszip.min.js?v=4.6.2"></script>
-    <script defer src="./vendor/pdf-lib.min.js?v=4.6.2"></script>
-    <script defer src="./vendor/pdf.min.js?v=4.6.2"></script>
-    <script defer src="./excel-ops.js?v=4.6.2"></script>
-    <script defer src="./pdf-ops.js?v=4.6.2"></script>
-    <script defer src="./pdf-to-png-ops.js?v=4.6.2"></script>
-    <script defer src="./thai-roads-config.js?v=4.6.2"></script>
-    <script defer src="./text-correct.js?v=4.6.2"></script>
-    <script defer src="./pdftable-ops.js?v=4.6.2"></script>
-    <script defer src="./optimize-ops.js?v=4.6.2"></script>
-    <script defer src="./budget-master.js?v=4.6.2"></script>
-    <script defer src="./budget-history-rules.js?v=4.6.2"></script>
-    <script defer src="./budget-builder-ops.js?v=4.6.2"></script>
-    <script defer src="./batch-rename-ops.js?v=4.6.2"></script>
-    <script defer src="./excel-cleaner-ops.js?v=4.6.2"></script>
-    <script defer src="./app.js?v=4.6.2"></script>
+    <link rel="stylesheet" href="./styles.css?v=4.6.3" />
+    <script defer src="./vendor/xlsx.full.min.js?v=4.6.3"></script>
+    <script defer src="./vendor/jszip.min.js?v=4.6.3"></script>
+    <script defer src="./vendor/pdf-lib.min.js?v=4.6.3"></script>
+    <script defer src="./vendor/pdf.min.js?v=4.6.3"></script>
+    <script defer src="./excel-ops.js?v=4.6.3"></script>
+    <script defer src="./pdf-ops.js?v=4.6.3"></script>
+    <script defer src="./pdf-to-png-ops.js?v=4.6.3"></script>
+    <script defer src="./thai-roads-config.js?v=4.6.3"></script>
+    <script defer src="./text-correct.js?v=4.6.3"></script>
+    <script defer src="./pdftable-ops.js?v=4.6.3"></script>
+    <script defer src="./optimize-ops.js?v=4.6.3"></script>
+    <script defer src="./budget-master.js?v=4.6.3"></script>
+    <script defer src="./budget-history-rules.js?v=4.6.3"></script>
+    <script defer src="./budget-builder-ops.js?v=4.6.3"></script>
+    <script defer src="./batch-rename-ops.js?v=4.6.3"></script>
+    <script defer src="./excel-cleaner-ops.js?v=4.6.3"></script>
+    <script defer src="./app.js?v=4.6.3"></script>
   </head>
   <body>
     <header class="site-header">
       <div class="brand-mark" aria-hidden="true">O</div>
       <div class="brand-copy">
-        <div class="brand-title-row"><h1>Office Toolkit</h1><span class="version-badge">v4.6.2</span></div>
-        <p>All-in-one Local Office File Utility · Excel · PDF · Conversion · Business Tools</p>
+        <div class="brand-title-row"><h1>Office Toolkit</h1><span class="version-badge">v4.6.3</span></div>
+        <p>All-in-one Local Office File Utility · Excel · PDF · File Utilities · Business Tools</p>
       </div>
       <span class="header-local-badge">LOCAL-FIRST</span>
     </header>
@@ -48,7 +48,6 @@
           <button class="category-tab active" type="button" data-category="all" aria-pressed="true">ทั้งหมด</button>
           <button class="category-tab" type="button" data-category="excel" aria-pressed="false">Excel</button>
           <button class="category-tab" type="button" data-category="pdf" aria-pressed="false">PDF</button>
-          <button class="category-tab" type="button" data-category="conversion" aria-pressed="false">Conversion</button>
           <button class="category-tab" type="button" data-category="files" aria-pressed="false">File Utilities</button>
           <button class="category-tab" type="button" data-category="business" aria-pressed="false">Business</button>
         </nav>
@@ -92,7 +91,7 @@
           <small>Trim · Blank Rows/Cols · Duplicates · Unmerge · Formula→Values · Hidden/Links</small>
         </button>
 
-        <h3 class="category-heading" data-category="pdf"><span>PDF</span><small>รวม แยก ลดขนาด จัดหน้า ประทับ และทำความสะอาด PDF</small></h3>
+        <h3 class="category-heading" data-category="pdf"><span>PDF</span><small>รวม แยก ลดขนาด จัดหน้า ประทับ ทำความสะอาด และแปลง PDF เป็น Excel / PNG หรือรูปภาพเป็น PDF</small></h3>
         <button class="mode-card pdf-card" type="button" data-mode="mergePdf" data-category="pdf" aria-pressed="false">
           <span class="mode-number">04</span>
           <span class="mode-type">PDF</span>
@@ -135,35 +134,33 @@
           <span>ทำความสะอาด PDF สแกน ลดพื้นเทา ตรวจหน้าว่าง/หน้าซ้ำ และสร้างไฟล์ใหม่ที่อ่านง่ายขึ้น</span>
           <small>Grayscale · Contrast · Blank/Duplicate detection · Recompress · Local 100%</small>
         </button>
-
-        <h3 class="category-heading" data-category="conversion"><span>Conversion</span><small>แปลงระหว่าง PDF · Excel · รูปภาพ</small></h3>
-        <button class="mode-card convert-card" type="button" data-mode="pdf2excel" data-category="conversion" aria-pressed="false">
+        <button class="mode-card convert-card" type="button" data-mode="pdf2excel" data-category="pdf" aria-pressed="false">
           <span class="mode-number">06</span>
           <span class="mode-type">PDF → EXCEL</span>
           <strong>PDF to Excel</strong>
           <span>ดึงข้อความและตารางจาก PDF ออกมาเป็น Excel</span>
           <small>ผลลัพธ์: 1 ไฟล์ Excel · ทุกหน้ารวมใน Sheet เดียว</small>
         </button>
-        <button class="mode-card ocr-card" type="button" data-mode="ocr2excel" data-category="conversion" aria-pressed="false">
+        <button class="mode-card ocr-card" type="button" data-mode="ocr2excel" data-category="pdf" aria-pressed="false">
           <span class="mode-number">07</span>
           <span class="mode-type">OCR · ทดลอง</span>
           <strong>PDF สแกน → Excel</strong>
           <span>อ่านตัวอักษรจาก PDF ที่เป็นรูปภาพ/สแกน (ไทย+อังกฤษ)</span>
           <small>โหลด OCR ครั้งแรก ~7MB · ช้ากว่าปกติ</small>
         </button>
-        <button class="mode-card convert-card image-pdf-card" type="button" data-mode="imageToPdf" data-category="conversion" aria-pressed="false">
-          <span class="mode-number">14</span>
-          <span class="mode-type">IMAGE → PDF</span>
-          <strong>Image to PDF</strong>
-          <span>รวม JPG · PNG · WebP หลายภาพเป็น PDF เดียว พร้อมจัดลำดับและกำหนดขนาดหน้า</span>
-          <small>A4 Fit · Original Size · Portrait/Landscape · Margin · Local 100%</small>
-        </button>
-        <button class="mode-card convert-card pdf-png-card" type="button" data-mode="pdfToPng" data-category="conversion" aria-pressed="false">
+        <button class="mode-card convert-card pdf-png-card" type="button" data-mode="pdfToPng" data-category="pdf" aria-pressed="false">
           <span class="mode-number">18</span>
           <span class="mode-type">PDF → PNG</span>
           <strong>PDF to PNG</strong>
           <span>แปลงหน้า PDF เป็นภาพ PNG เลือกช่วงหน้าและความละเอียดได้ 1 หน้าได้ PNG เดี่ยว หลายหน้าได้ ZIP</span>
           <small>Page range · 72–300 DPI · Transparent option · Local 100%</small>
+        </button>
+        <button class="mode-card convert-card image-pdf-card" type="button" data-mode="imageToPdf" data-category="pdf" aria-pressed="false">
+          <span class="mode-number">14</span>
+          <span class="mode-type">IMAGE → PDF</span>
+          <strong>Image to PDF</strong>
+          <span>รวม JPG · PNG · WebP หลายภาพเป็น PDF เดียว พร้อมจัดลำดับและกำหนดขนาดหน้า</span>
+          <small>A4 Fit · Original Size · Portrait/Landscape · Margin · Local 100%</small>
         </button>
 
         <h3 class="category-heading" data-category="files"><span>File Utilities</span><small>จัดการไฟล์ทั่วไป</small></h3>
@@ -909,6 +906,6 @@
       </section>
     </main>
 
-    <footer>Office Toolkit v4.6.2 · Local-first · ไฟล์ประมวลผลบนอุปกรณ์ของผู้ใช้</footer>
+    <footer>Office Toolkit v4.6.3 · Local-first · ไฟล์ประมวลผลบนอุปกรณ์ของผู้ใช้</footer>
   </body>
 </html>

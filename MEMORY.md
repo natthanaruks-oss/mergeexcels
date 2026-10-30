@@ -74,3 +74,8 @@ Implemented PDF Watermark & Stamp as a separate PDF module. Uses pdf-lib standar
 - Owner pointed out categories were not tidy: cards were in build order with categories interleaved and one tool (Batch Rename) sat under Conversion.
 - Decision: group the "all" view by category with headings, add a File Utilities category for general file tools (also the future home of File Naming Standard), keep menu numbers as stable IDs because UI text and README cite them, derive the tool counter from the cards.
 - Next time: when adding a module, place it in the right group and let the product-shell grouping test catch ordering mistakes.
+
+## 2026-10-30 — PDF tools belong in the PDF category (v4.6.3)
+- Owner corrected the v4.6.2 grouping: PDF→Excel, OCR→Excel, PDF→PNG and Image→PDF were under "Conversion". Rule now: anything that reads or writes a PDF is in the PDF category; empty categories are not allowed (test-enforced).
+- Conversion tab removed. If a future tool does not involve a PDF (e.g. Oracle HTML-XLS cleaner is Business; a generic format converter) place it by its main input/output, and only create a new category when it has real tools.
+- Next time: ask or state the category rule before regrouping, instead of inferring it from build order.

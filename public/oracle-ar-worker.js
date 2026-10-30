@@ -6,8 +6,8 @@
  * โดยไม่แสดง 1 HTML Table เป็น 1 Excel Sheet เหมือนการอ่านแบบทั่วไป
  */
 importScripts(
-  "./vendor/xlsx.full.min.js?v=4.6.2",
-  "./oracle-ar-ops.js?v=4.6.2"
+  "./vendor/xlsx.full.min.js?v=4.6.3",
+  "./oracle-ar-ops.js?v=4.6.3"
 );
 
 function postProgress(message, progress) {

@@ -5,8 +5,8 @@ const html = fs.readFileSync('public/index.html', 'utf8');
 const app = fs.readFileSync('public/app.js', 'utf8');
 
 assert(html.includes('<h1>Office Toolkit</h1>'), 'Product title must be Office Toolkit');
-assert(html.includes('v4.6.2'), 'Version badge must be v4.6.2');
-for (const category of ['all', 'excel', 'pdf', 'conversion', 'files', 'business']) {
+assert(html.includes('v4.6.3'), 'Version badge must be v4.6.3');
+for (const category of ['all', 'excel', 'pdf', 'files', 'business']) {
   assert(html.includes(`data-category="${category}"`), `Missing category ${category}`);
 }
 const modes = [
@@ -44,6 +44,15 @@ for (const item of seq) {
 assert(app.includes('categoryHeadings'), 'Group headings must follow the category filter');
 assert(html.includes('<div class="catalog-count"><strong>' + modes.length + '</strong>'), 'Static catalog count must equal the number of tools (' + modes.length + ')');
 assert(app.includes('.catalog-count strong'), 'Catalog counter must be derived from the cards');
+// Category rules: anything that reads or writes a PDF belongs to the PDF category; no empty tab may exist.
+const categoryOf = (mode) => (html.match(new RegExp('data-mode="' + mode + '"[^>]*data-category="([^"]+)"')) || [])[1];
+for (const mode of ['mergePdf', 'splitPdf', 'compressPdf', 'pdfPageTools', 'pdfWatermark', 'pdfScanCleanup', 'pdf2excel', 'ocr2excel', 'pdfToPng', 'imageToPdf']) {
+  assert.strictEqual(categoryOf(mode), 'pdf', mode + ' must be in the PDF category');
+}
+for (const tab of [...html.matchAll(/class="category-tab[^"]*"[^>]*data-category="([^"]+)"/g)].map((x) => x[1]).filter((c) => c !== 'all')) {
+  assert(html.includes('data-mode') && new RegExp('class="mode-card[^"]*"[^>]*data-category="' + tab + '"').test(html), 'Category tab "' + tab + '" has no tools');
+}
+assert(!html.includes('data-category="conversion"'), 'The empty Conversion category must not come back');
 console.log('Office Toolkit product-shell tests passed.');
 
 assert(html.includes('PDF Page Tools'), 'Phase 1A card missing');

@@ -6,7 +6,7 @@ Baseline scope approved 2026-08-13. The Desktop Companion phase is intentionally
 Goal: turn the growing MergeExcels utility into one coherent Office Toolkit without changing existing business logic.
 
 - [x] Rename visible product shell to Office Toolkit.
-- [x] Group existing tools into Excel / PDF / Conversion / Business categories.
+- [x] Group existing tools into Excel / PDF / File Utilities / Business categories (v4.6.3: PDF conversions live under PDF).
 - [x] Preserve all 11 existing tools and engines.
 - [x] Add product specification, roadmap, release control and project memory.
 - [ ] Production/UAT confirmation remains part of final hardening, not a reason to block feature development.

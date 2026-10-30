@@ -5,7 +5,7 @@ Office Toolkit is a local-first web application for common office file workflows
 
 ## Product boundaries
 - One web application and one primary URL for normal office file tasks.
-- Functions are grouped by user intent: Excel, PDF, Conversion, Business, Security.
+- Functions are grouped by user intent: Excel, PDF (everything that reads or writes a PDF, including PDF→Excel/PNG and Image→PDF), File Utilities, Business, Security.
 - Processing engines remain modular so one tool can evolve without tightly coupling unrelated workflows.
 - Very-large-file/Desktop Companion work is outside this roadmap because that track is already complete. Do not reintroduce it without an explicit new request.
 

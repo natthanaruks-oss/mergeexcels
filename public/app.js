@@ -587,7 +587,7 @@
     if (!state.oracleArBuffer) return Promise.reject(new Error("ไม่พบข้อมูลไฟล์ Oracle AR กรุณาเลือกไฟล์ใหม่"));
     terminateOracleArWorker();
     const jobId = state.oracleArJobId;
-    const worker = new Worker(`./oracle-ar-worker.js?v=4.6.2`);
+    const worker = new Worker(`./oracle-ar-worker.js?v=4.6.3`);
     state.oracleArWorker = worker;
 
     return new Promise((resolve, reject) => {
@@ -706,7 +706,7 @@
     if (policy.blocked) return Promise.reject(new Error(policy.message));
     terminateOptimizeWorker();
     const jobId = state.optimizeJobId;
-    const worker = new Worker(`./optimize-worker.js?v=4.6.2`);
+    const worker = new Worker(`./optimize-worker.js?v=4.6.3`);
     state.optimizeWorker = worker;
 
     return new Promise(async (resolve, reject) => {
