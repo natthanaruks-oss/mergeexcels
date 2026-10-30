@@ -54,3 +54,12 @@ Implemented PDF Watermark & Stamp as a separate PDF module. Uses pdf-lib standar
 - Analyze-first UX; low-risk cleanup defaults only.
 - Structural cleanup rebuilds sheet cell matrices while retaining cell objects/formulas where possible; advanced Excel objects may not survive and the UI warns users.
 - Formula-to-values, external-link removal, hidden rows/columns and formatting cleanup remain explicit opt-in controls.
+
+## 2026-10-30 — GitHub takeover: Phase 2A integrated into the repository
+- Baseline audit: GitHub `main` was v4.5.0 (Phase 0–1E). v4.6.0 and v4.7.0 existed only as generated ZIPs; no v4.8.0 artifact was found on the audit machine. Production version is unverified.
+- v4.6.0 (Excel Cleaner) was integrated on branch `integrate/v4.6.0-excel-cleaner` after review rather than bulk-copied.
+- Review finding 1: the shipped UI path re-implemented the cleaning logic in `app.js` while the test covered a different, unused function. Decision: one engine, `ExcelCleanerOps.cleanWorksheet`, called by the UI; `product-shell` test blocks the duplicate from returning.
+- Review finding 2: removing rows/columns while leaving formulas would shift references and Excel would silently recalculate wrong values. Decision: stop with a clear message unless Formula → Values is enabled; trailing-only removals do not trigger the guard.
+- Also fixed: duplicate removal now drops merges/column widths/row heights (they would misalign); converted dates get an explicit `yyyy-mm-dd` format.
+- Next time: when integrating a generated release, check that tests exercise the code the UI actually calls, not just a sibling function.
+- Still open: OCR relies on jsDelivr/tessdata hosts in the CSP (scope-drift review needed before Phase 3 OCR work); v4.7.0 Compare and v4.8.0 Reconcile not yet integrated.

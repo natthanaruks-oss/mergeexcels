@@ -44,3 +44,5 @@ assert(app.includes('processBatchRename'), 'Batch Rename processor missing');
 assert(html.includes('Excel Cleaner'), 'Phase 2A card missing');
 assert(html.includes('id="excelCleanerOptions"'), 'Excel Cleaner options missing');
 assert(app.includes('processExcelCleaner'), 'Excel Cleaner processor missing');
+assert(app.includes('ExcelCleanerOps.cleanWorksheet'), 'Excel Cleaner must run through the tested ExcelCleanerOps engine');
+assert(!app.includes('cleanWorksheetPreservingCells'), 'Untested duplicate cleaner implementation must not return to app.js');

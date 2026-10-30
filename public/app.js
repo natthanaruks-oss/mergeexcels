@@ -2538,73 +2538,27 @@
         <span class="scan-chip">Hidden rows/cols ${formatNumber(t.hiddenRows+t.hiddenCols)}</span>
         <span class="scan-chip">Filters ${formatNumber(t.filters)}</span>
       </div>
+      ${t.formulas>0?`<p class="optimize-warning">พบสูตร ${formatNumber(t.formulas)} เซลล์ — ถ้าเลือกลบแถว/คอลัมน์/ซ้ำ/ซ่อน ต้องเปิด "Formula → Values" ด้วย ไม่เช่นนั้นระบบจะหยุดเพื่อป้องกันสูตรอ้างอิงผิดตำแหน่ง</p>`:""}
       <details><summary>ดูรายละเอียดราย Sheet</summary><div class="sheet-analysis">${report.sheets.map((x)=>`<div class="sheet-row"><strong>${escapeHtml(x.name)}</strong><span>${formatNumber(x.rows)} rows · ${formatNumber(x.cols)} cols · blank ${x.blankRows}/${x.blankCols} · dup ${x.duplicateRows} · formulas ${x.formulas}</span></div>`).join("")}</div></details>`;
     els.excelCleanerAnalysis.classList.remove("hidden");
-  }
-
-  function cellBlank(cell) {
-    return !cell || (cell.v == null && !cell.f) || (typeof cell.v === "string" && cell.v.trim() === "" && !cell.f);
-  }
-  function cellKey(cell) {
-    if (!cell) return null;
-    return cell.f ? `F:${cell.f}|V:${String(cell.v ?? "")}` : `V:${String(cell.v ?? "")}`;
-  }
-  function cloneCell(cell) { return cell ? { ...cell } : null; }
-
-  function cleanWorksheetPreservingCells(ws, options) {
-    if (!ws || !ws["!ref"]) return XLSX.utils.aoa_to_sheet([]);
-    const range = XLSX.utils.decode_range(ws["!ref"]);
-    let matrix = [];
-    for (let r=range.s.r; r<=range.e.r; r+=1) {
-      const row=[];
-      for (let c=range.s.c; c<=range.e.c; c+=1) row.push(cloneCell(ws[XLSX.utils.encode_cell({r,c})]));
-      matrix.push(row);
-    }
-    if (options.removeHidden) {
-      const hiddenRows = ws["!rows"] || [], hiddenCols = ws["!cols"] || [];
-      matrix = matrix.filter((_,i)=>!(hiddenRows[range.s.r+i] && hiddenRows[range.s.r+i].hidden));
-      const keep=[]; const width=matrix.reduce((m,r)=>Math.max(m,r.length),0);
-      for(let c=0;c<width;c+=1) if(!(hiddenCols[range.s.c+c] && hiddenCols[range.s.c+c].hidden)) keep.push(c);
-      matrix=matrix.map(row=>keep.map(c=>row[c]||null));
-    }
-    if (options.trimSpaces || options.standardizeNumbers || options.standardizeDates || options.formulaValues || options.removeExternalLinks) {
-      matrix.forEach(row=>row.forEach((cell)=>{
-        if(!cell) return;
-        if(options.trimSpaces && typeof cell.v === "string") cell.v = ExcelCleanerOps.normalizeText(cell.v);
-        if(options.standardizeNumbers && typeof cell.v === "string" && /^-?\d{1,3}(,\d{3})+(\.\d+)?$/.test(cell.v.trim())) { const n=Number(cell.v.replace(/,/g,"")); if(Number.isFinite(n)){cell.v=n;cell.t="n";} }
-        if(options.standardizeDates && typeof cell.v === "string") { const m=cell.v.trim().match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})$/); if(m){const d=Number(m[1]),mo=Number(m[2]),y=Number(m[3]);const dt=new Date(Date.UTC(y,mo-1,d));if(y>=1900&&y<=2200&&dt.getUTCFullYear()===y&&dt.getUTCMonth()===mo-1&&dt.getUTCDate()===d){cell.v=dt;cell.t="d";delete cell.w;}} }
-        if (cell.f && (options.formulaValues || (options.removeExternalLinks && /\[[^\]]+\]/.test(cell.f)))) delete cell.f;
-      }));
-    }
-    if (options.fillDown) {
-      const width=matrix.reduce((m,r)=>Math.max(m,r.length),0);
-      for(let c=0;c<width;c+=1){let last=null;for(let r=0;r<matrix.length;r+=1){const row=matrix[r];const nonBlank=row.some(x=>!cellBlank(x));if(!cellBlank(row[c])) last=cloneCell(row[c]); else if(last&&nonBlank) row[c]=cloneCell(last);}}
-    }
-    if (options.removeBlankRows) matrix=matrix.filter(row=>row.some(cell=>!cellBlank(cell)));
-    if (options.removeBlankCols && matrix.length) { const width=matrix.reduce((m,r)=>Math.max(m,r.length),0), keep=[];for(let c=0;c<width;c+=1) if(matrix.some(row=>!cellBlank(row[c]))) keep.push(c);matrix=matrix.map(row=>keep.map(c=>row[c]||null)); }
-    if (options.removeDuplicates && matrix.length>1) { const head=matrix[0], seen=new Set(), rest=[];matrix.slice(1).forEach(row=>{const k=JSON.stringify(row.map(cellKey));if(!seen.has(k)){seen.add(k);rest.push(row);}});matrix=[head,...rest]; }
-    const out={}; let maxR=-1,maxC=-1;
-    matrix.forEach((row,r)=>row.forEach((cell,c)=>{if(cell){out[XLSX.utils.encode_cell({r,c})]=cell;maxR=Math.max(maxR,r);maxC=Math.max(maxC,c);}}));
-    out["!ref"] = maxR>=0 ? XLSX.utils.encode_range({s:{r:0,c:0},e:{r:maxR,c:maxC}}) : "A1";
-    if (!options.unmerge && !options.removeBlankRows && !options.removeBlankCols && !options.removeHidden && ws["!merges"]) out["!merges"] = ws["!merges"].map(m=>({...m,s:{...m.s},e:{...m.e}}));
-    if (!options.removeFilters && ws["!autofilter"] && !options.removeBlankRows && !options.removeBlankCols && !options.removeHidden) out["!autofilter"]={...ws["!autofilter"]};
-    if (!options.formattingCleanup) {
-      if (ws["!cols"] && !options.removeBlankCols && !options.removeHidden) out["!cols"] = ws["!cols"].map(x=>x?{...x}:x);
-      if (ws["!rows"] && !options.removeBlankRows && !options.removeHidden) out["!rows"] = ws["!rows"].map(x=>x?{...x}:x);
-    } else {
-      Object.keys(out).forEach(addr=>{if(addr[0]!=="!"&&out[addr]&&out[addr].s) delete out[addr].s;});
-    }
-    return out;
   }
 
   async function processExcelCleaner() {
     if (!state.parsed.length) throw new Error("กรุณาเลือก Excel ก่อน");
     const source=state.parsed[0].workbook, options=excelCleanerOptions();
     const wb=XLSX.utils.book_new();
-    source.SheetNames.forEach((name)=>XLSX.utils.book_append_sheet(wb, cleanWorksheetPreservingCells(source.Sheets[name], options), name));
+    const total={removedBlankRows:0,removedBlankCols:0,removedDuplicateRows:0,removedHiddenRows:0,removedHiddenCols:0,trimmedCells:0,formulasToValues:0};
+    source.SheetNames.forEach((name)=>{
+      let result;
+      try { result = ExcelCleanerOps.cleanWorksheet(source.Sheets[name], options, XLSX); }
+      catch (error) { throw new Error(`Sheet "${name}": ${error.message}`); }
+      Object.keys(total).forEach((k)=>{ total[k]+=result.stats[k]||0; });
+      XLSX.utils.book_append_sheet(wb, result.sheet, name);
+    });
     const outputName=ensureExtension(els.outputName.value || `${ExcelOps.basename(state.files[0].name)}_cleaned.xlsx`, "xlsx");
     XLSX.writeFile(wb, outputName, {bookType:"xlsx",compression:true,cellStyles:!options.formattingCleanup});
-    return `${outputName} เรียบร้อย · ${source.SheetNames.length} Sheets · ต้นฉบับไม่ได้ถูกแก้ไข`;
+    const removedRows=total.removedBlankRows+total.removedDuplicateRows+total.removedHiddenRows, removedCols=total.removedBlankCols+total.removedHiddenCols;
+    return `${outputName} เรียบร้อย · ${source.SheetNames.length} Sheets · ลบแถว ${formatNumber(removedRows)} · ลบคอลัมน์ ${formatNumber(removedCols)} · Trim ${formatNumber(total.trimmedCells)} เซลล์ · ต้นฉบับไม่ได้ถูกแก้ไข`;
   }
 
   async function processFiles() {

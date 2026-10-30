@@ -74,7 +74,10 @@ Goal: reduce manual cleanup, comparison and reconciliation work.
 - [x] Hidden row/column and filter cleanup controls
 - [x] Values-focused formatting cleanup option
 - [x] Non-destructive output to a new XLSX file
-- [ ] Deployed browser UAT on representative raw-data workbooks
+- [x] Single tested engine (`ExcelCleanerOps.cleanWorksheet`) used by the UI; 13 engine test groups (2026-10-30 integration)
+- [x] Formula-reference guard: removing rows/columns in front of surviving formulas stops with an explanation unless Formula → Values is on
+- [ ] Known limits: dd/mm/yyyy dates only (Buddhist-era and mm/dd not detected); row 1 is always the header for duplicate removal; SheetJS CE write loses advanced Excel objects
+- [ ] Deployed browser UAT on representative raw-data workbooks (not yet done; production version unverified)
 
 ### Phase 2B — Excel Compare
 - Compare two workbooks/sheets
