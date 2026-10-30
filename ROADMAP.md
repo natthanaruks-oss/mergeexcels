@@ -92,6 +92,14 @@ Goal: reduce manual cleanup, comparison and reconciliation work.
 - Controlled tolerance options
 - One-to-many/fuzzy matching only after exact reconciliation is stable and auditable
 
+## Owner-requested additions (outside numbered phases)
+
+### PDF to PNG (v4.6.1) — IMPLEMENTED / AWAITING DEPLOYED UAT
+- [x] Page range + DPI (72–300), single PNG or ZIP, optional transparent background
+- [x] Page-limit and pixel-limit safeguards; oversized pages scaled down and reported
+- [x] Browser-tested with a generated multi-size/rotated PDF (see RELEASE_NOTES_v4.6.1.md)
+- [ ] Deployed UAT on real PDFs (large, scanned, encrypted)
+
 ## Phase 3 — Conversion & Data Extraction
 Goal: harden extraction/conversion tools separately from editing tools.
 

@@ -36,6 +36,8 @@ const requiredFiles = [
   "tests/batch-rename-ops.test.cjs",
   "public/excel-cleaner-ops.js",
   "tests/excel-cleaner-ops.test.cjs",
+  "public/pdf-to-png-ops.js",
+  "tests/pdf-to-png-ops.test.cjs",
 ];
 
 for (const relativePath of requiredFiles) {
@@ -154,6 +156,12 @@ if (!indexHtml.includes('data-mode="excelCleaner"') || !app.includes('processExc
 }
 if (!indexHtml.includes('excel-cleaner-ops.js') || !indexHtml.includes('cleanBlankRows')) {
   throw new Error("Excel Cleaner engine/options ไม่ครบ");
+}
+if (!indexHtml.includes('data-mode="pdfToPng"') || !app.includes('processPdfToPng')) {
+  throw new Error("PDF → PNG เชื่อมต่อไม่ครบ");
+}
+if (!indexHtml.includes('pdf-to-png-ops.js') || !indexHtml.includes('id="pngDpi"') || !indexHtml.includes('id="pngPageRange"')) {
+  throw new Error("PDF → PNG engine/options ไม่ครบ");
 }
 if (packageJson.dependencies?.xlsx === "0.18.5") {
   console.warn("WARNING: xlsx@0.18.5 has known security advisories; see SECURITY.md.");

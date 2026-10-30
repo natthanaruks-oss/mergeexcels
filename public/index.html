@@ -5,29 +5,30 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="Office Toolkit สำหรับ Excel, PDF, Conversion และ Business Data โดยประมวลผลไฟล์แบบ Local-first ในเบราว์เซอร์" />
     <title>Office Toolkit — Local-first File Utility</title>
-    <link rel="stylesheet" href="./styles.css?v=4.6.0" />
-    <script defer src="./vendor/xlsx.full.min.js?v=4.6.0"></script>
-    <script defer src="./vendor/jszip.min.js?v=4.6.0"></script>
-    <script defer src="./vendor/pdf-lib.min.js?v=4.6.0"></script>
-    <script defer src="./vendor/pdf.min.js?v=4.6.0"></script>
-    <script defer src="./excel-ops.js?v=4.6.0"></script>
-    <script defer src="./pdf-ops.js?v=4.6.0"></script>
-    <script defer src="./thai-roads-config.js?v=4.6.0"></script>
-    <script defer src="./text-correct.js?v=4.6.0"></script>
-    <script defer src="./pdftable-ops.js?v=4.6.0"></script>
-    <script defer src="./optimize-ops.js?v=4.6.0"></script>
-    <script defer src="./budget-master.js?v=4.6.0"></script>
-    <script defer src="./budget-history-rules.js?v=4.6.0"></script>
-    <script defer src="./budget-builder-ops.js?v=4.6.0"></script>
-    <script defer src="./batch-rename-ops.js?v=4.6.0"></script>
-    <script defer src="./excel-cleaner-ops.js?v=4.6.0"></script>
-    <script defer src="./app.js?v=4.6.0"></script>
+    <link rel="stylesheet" href="./styles.css?v=4.6.1" />
+    <script defer src="./vendor/xlsx.full.min.js?v=4.6.1"></script>
+    <script defer src="./vendor/jszip.min.js?v=4.6.1"></script>
+    <script defer src="./vendor/pdf-lib.min.js?v=4.6.1"></script>
+    <script defer src="./vendor/pdf.min.js?v=4.6.1"></script>
+    <script defer src="./excel-ops.js?v=4.6.1"></script>
+    <script defer src="./pdf-ops.js?v=4.6.1"></script>
+    <script defer src="./pdf-to-png-ops.js?v=4.6.1"></script>
+    <script defer src="./thai-roads-config.js?v=4.6.1"></script>
+    <script defer src="./text-correct.js?v=4.6.1"></script>
+    <script defer src="./pdftable-ops.js?v=4.6.1"></script>
+    <script defer src="./optimize-ops.js?v=4.6.1"></script>
+    <script defer src="./budget-master.js?v=4.6.1"></script>
+    <script defer src="./budget-history-rules.js?v=4.6.1"></script>
+    <script defer src="./budget-builder-ops.js?v=4.6.1"></script>
+    <script defer src="./batch-rename-ops.js?v=4.6.1"></script>
+    <script defer src="./excel-cleaner-ops.js?v=4.6.1"></script>
+    <script defer src="./app.js?v=4.6.1"></script>
   </head>
   <body>
     <header class="site-header">
       <div class="brand-mark" aria-hidden="true">O</div>
       <div class="brand-copy">
-        <div class="brand-title-row"><h1>Office Toolkit</h1><span class="version-badge">v4.6.0</span></div>
+        <div class="brand-title-row"><h1>Office Toolkit</h1><span class="version-badge">v4.6.1</span></div>
         <p>All-in-one Local Office File Utility · Excel · PDF · Conversion · Business Tools</p>
       </div>
       <span class="header-local-badge">LOCAL-FIRST</span>
@@ -151,6 +152,13 @@
           <strong>Image to PDF</strong>
           <span>รวม JPG · PNG · WebP หลายภาพเป็น PDF เดียว พร้อมจัดลำดับและกำหนดขนาดหน้า</span>
           <small>A4 Fit · Original Size · Portrait/Landscape · Margin · Local 100%</small>
+        </button>
+        <button class="mode-card convert-card pdf-png-card" type="button" data-mode="pdfToPng" data-category="conversion" aria-pressed="false">
+          <span class="mode-number">18</span>
+          <span class="mode-type">PDF → PNG</span>
+          <strong>PDF to PNG</strong>
+          <span>แปลงหน้า PDF เป็นภาพ PNG เลือกช่วงหน้าและความละเอียดได้ 1 หน้าได้ PNG เดี่ยว หลายหน้าได้ ZIP</span>
+          <small>Page range · 72–300 DPI · Transparent option · Local 100%</small>
         </button>
         <button class="mode-card pdf-card scan-cleanup-card" type="button" data-mode="pdfScanCleanup" data-category="pdf" aria-pressed="false">
           <span class="mode-number">15</span>
@@ -661,6 +669,44 @@
           </div>
         </section>
 
+        <section id="pdfToPngOptions" class="options-panel pdf-to-png-panel hidden" aria-labelledby="pdfToPngTitle">
+          <div class="panel-heading">
+            <div>
+              <h3 id="pdfToPngTitle">PDF to PNG</h3>
+              <small>แปลงแต่ละหน้าของ PDF เป็นภาพ PNG ใน Browser ของคุณ ไฟล์ต้นฉบับไม่ถูกแก้ไขและไม่ถูกอัปโหลด</small>
+            </div>
+            <span class="local-badge">100% LOCAL</span>
+          </div>
+          <div class="pdf-to-png-grid">
+            <label class="field-group">
+              <span>Page range</span>
+              <input id="pngPageRange" type="text" placeholder="เว้นว่าง = ทุกหน้า หรือเช่น 1,3,5-8" spellcheck="false" />
+              <small>1 หน้า = PNG เดี่ยว · หลายหน้า = ZIP</small>
+            </label>
+            <label class="field-group">
+              <span>Resolution (DPI)</span>
+              <select id="pngDpi">
+                <option value="72">72 DPI — ไฟล์เล็ก / ดูบนจอ</option>
+                <option value="96">96 DPI — มาตรฐานหน้าจอ</option>
+                <option value="150" selected>150 DPI — ใช้งานทั่วไป</option>
+                <option value="200">200 DPI — คมชัด</option>
+                <option value="300">300 DPI — งานพิมพ์ (ไฟล์ใหญ่)</option>
+              </select>
+            </label>
+            <label class="field-group">
+              <span>Page limit safety</span>
+              <input id="pngMaxPages" type="number" min="1" max="500" step="1" value="100" />
+              <small>ป้องกัน Browser ใช้หน่วยความจำมากเกินไป</small>
+            </label>
+          </div>
+          <div class="option-check-grid">
+            <label class="check-row compact"><input id="pngTransparent" type="checkbox" /><span><strong>Transparent background</strong><small>ปิดไว้ = พื้นหลังขาว (ค่าเริ่มต้น) เปิด = ส่วนที่ PDF ไม่ได้ระบายสีจะโปร่งใส อาจแสดงเป็นสีดำในบางโปรแกรมดูภาพ</small></span></label>
+          </div>
+          <div class="pdf-compress-note">
+            <strong>ข้อควรรู้:</strong> หน้าที่ใหญ่มากจะถูกลดความละเอียดอัตโนมัติเพื่อไม่ให้ Browser ค้าง และระบบจะแจ้งหลังสร้างไฟล์ ผลลัพธ์เป็นภาพ ไม่มีข้อความที่ค้นหาได้
+          </div>
+        </section>
+
         <section id="batchRenameOptions" class="options-panel batch-rename-panel hidden" aria-labelledby="batchRenameTitle">
           <div class="panel-heading">
             <div>
@@ -855,6 +901,6 @@
       </section>
     </main>
 
-    <footer>Office Toolkit v4.6.0 · Local-first · ไฟล์ประมวลผลบนอุปกรณ์ของผู้ใช้</footer>
+    <footer>Office Toolkit v4.6.1 · Local-first · ไฟล์ประมวลผลบนอุปกรณ์ของผู้ใช้</footer>
   </body>
 </html>

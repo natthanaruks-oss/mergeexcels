@@ -1192,3 +1192,13 @@ footer { padding: 24px; color: var(--muted); text-align: center; font-size: 12px
 .rename-status.danger { background: #fde8e7; color: #a62a24; }
 @media (max-width: 1080px) { .batch-rename-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 620px) { .batch-rename-grid { grid-template-columns: 1fr; } .batch-preview-head { align-items: flex-start; flex-direction: column; } }
+
+/* v4.6.1 — PDF to PNG */
+.pdf-png-card { border-color: #d5cfe6; }
+.pdf-to-png-panel { border-color: #d5cfe6; background: #fbf9fe; }
+.pdf-to-png-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 14px;
+  margin-bottom: 14px;
+}

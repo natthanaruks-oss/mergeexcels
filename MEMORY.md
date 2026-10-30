@@ -63,3 +63,9 @@ Implemented PDF Watermark & Stamp as a separate PDF module. Uses pdf-lib standar
 - Also fixed: duplicate removal now drops merges/column widths/row heights (they would misalign); converted dates get an explicit `yyyy-mm-dd` format.
 - Next time: when integrating a generated release, check that tests exercise the code the UI actually calls, not just a sibling function.
 - Still open: OCR relies on jsDelivr/tessdata hosts in the CSP (scope-drift review needed before Phase 3 OCR work); v4.7.0 Compare and v4.8.0 Reconcile not yet integrated.
+
+## 2026-10-30 — PDF to PNG added as v4.6.1
+- Owner requested a PDF → PNG module. Built on top of the unmerged v4.6.0 branch as v4.6.1 so it does not collide with the Compare (v4.7.0) / Reconcile (v4.8.0) numbering.
+- Decisions: page range + DPI choices; one page = bare PNG, many = ZIP; white background by default with an opt-in transparent background; per-page (~36M px) and whole-export (~600M px) limits that downscale/refuse instead of crashing the browser.
+- Test-environment note: the in-app browser pane never fires requestAnimationFrame (page unfocused), which stalls PDF.js render; verification used a test-only rAF shim. Not a product defect, but real UAT must be done in a normal focused browser.
+- Next time: a module is not verified by planner unit tests alone; render through the real page.

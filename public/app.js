@@ -204,6 +204,19 @@
       dropHint: "เลือกได้หลายภาพ · จัดลำดับด้วย ▲▼ หรือ Drag & Drop ก่อน Export",
       unitLabel: "ภาพ",
     },
+    pdfToPng: {
+      kind: "pdf",
+      eyebrow: "PDF → PNG",
+      title: "แปลง PDF เป็นภาพ PNG",
+      description: "เลือกหน้าและ DPI แล้วแปลงเป็น PNG — 1 หน้าได้ไฟล์ PNG เดี่ยว หลายหน้าได้ ZIP · Local 100%",
+      button: "สร้างไฟล์ PNG",
+      output: "pdf_pages",
+      extension: "zip",
+      multiple: false,
+      dropTitle: "เลือก PDF 1 ไฟล์ที่ต้องการแปลงเป็น PNG",
+      dropHint: "เลือกช่วงหน้าและ DPI ได้ · พื้นหลังขาวเป็นค่าเริ่มต้น หรือเลือกโปร่งใส",
+      unitLabel: "หน้า",
+    },
     pdfScanCleanup: {
       kind: "pdf",
       eyebrow: "PDF SCAN CLEANUP",
@@ -331,6 +344,11 @@
     imagePdfQuality: document.getElementById("imagePdfQuality"),
     imagePdfPreview: document.getElementById("imagePdfPreview"),
     pdfScanCleanupOptions: document.getElementById("pdfScanCleanupOptions"),
+    pdfToPngOptions: document.getElementById("pdfToPngOptions"),
+    pngPageRange: document.getElementById("pngPageRange"),
+    pngDpi: document.getElementById("pngDpi"),
+    pngTransparent: document.getElementById("pngTransparent"),
+    pngMaxPages: document.getElementById("pngMaxPages"),
     pdfScanProfile: document.getElementById("pdfScanProfile"),
     pdfScanContrast: document.getElementById("pdfScanContrast"),
     pdfScanContrastValue: document.getElementById("pdfScanContrastValue"),
@@ -568,7 +586,7 @@
     if (!state.oracleArBuffer) return Promise.reject(new Error("ไม่พบข้อมูลไฟล์ Oracle AR กรุณาเลือกไฟล์ใหม่"));
     terminateOracleArWorker();
     const jobId = state.oracleArJobId;
-    const worker = new Worker(`./oracle-ar-worker.js?v=4.6.0`);
+    const worker = new Worker(`./oracle-ar-worker.js?v=4.6.1`);
     state.oracleArWorker = worker;
 
     return new Promise((resolve, reject) => {
@@ -687,7 +705,7 @@
     if (policy.blocked) return Promise.reject(new Error(policy.message));
     terminateOptimizeWorker();
     const jobId = state.optimizeJobId;
-    const worker = new Worker(`./optimize-worker.js?v=4.6.0`);
+    const worker = new Worker(`./optimize-worker.js?v=4.6.1`);
     state.optimizeWorker = worker;
 
     return new Promise(async (resolve, reject) => {
@@ -1090,6 +1108,7 @@
     if (els.pdfWatermarkOptions) els.pdfWatermarkOptions.classList.toggle("hidden", mode !== "pdfWatermark");
     if (els.imageToPdfOptions) els.imageToPdfOptions.classList.toggle("hidden", mode !== "imageToPdf");
     if (els.pdfScanCleanupOptions) els.pdfScanCleanupOptions.classList.toggle("hidden", mode !== "pdfScanCleanup");
+    if (els.pdfToPngOptions) els.pdfToPngOptions.classList.toggle("hidden", mode !== "pdfToPng");
     if (els.batchRenameOptions) els.batchRenameOptions.classList.toggle("hidden", mode !== "batchRename");
     if (els.excelCleanerOptions) els.excelCleanerOptions.classList.toggle("hidden", mode !== "excelCleaner");
     if (mode === "budgetBuilder") populateBudgetWorkTypes();
@@ -1181,6 +1200,7 @@
       if (state.mode === "pdfPageTools") throw new Error("PDF Page Tools รองรับครั้งละ 1 ไฟล์เท่านั้น");
       if (state.mode === "pdfWatermark") throw new Error("PDF Watermark & Stamp รองรับครั้งละ 1 ไฟล์เท่านั้น");
       if (state.mode === "pdfScanCleanup") throw new Error("PDF Scan Cleanup รองรับครั้งละ 1 ไฟล์เท่านั้น");
+      if (state.mode === "pdfToPng") throw new Error("PDF → PNG รองรับครั้งละ 1 ไฟล์เท่านั้น");
       throw new Error(config.kind === "pdf" ? "Split PDF รองรับครั้งละ 1 ไฟล์เท่านั้น" : "Split File รองรับครั้งละ 1 ไฟล์เท่านั้น");
     }
     return valid;
@@ -1301,6 +1321,9 @@
         state.scanAnalysis = null;
         if (els.pdfScanAnalysis) { els.pdfScanAnalysis.classList.add("hidden"); els.pdfScanAnalysis.innerHTML = ""; }
         setStatus("อ่าน PDF เรียบร้อย · กด Analyze scan pages ก่อนหากต้องการตรวจหน้าว่าง/หน้าซ้ำ", "success", 0);
+      } else if (state.mode === "pdfToPng") {
+        els.outputName.value = `${PdfOps.basename(files[0].name)}_png`;
+        setStatus(`อ่าน PDF เรียบร้อย ${state.parsed[0].unitCount || ""} หน้า · เลือกช่วงหน้าและ DPI แล้วกดสร้างไฟล์ PNG`, "success", 0);
       } else if (state.mode === "pdfPageTools") {
         els.outputName.value = `${PdfOps.basename(files[0].name)}_edited.pdf`;
         setStatus(`อ่าน PDF เรียบร้อย ${state.pages.length} หน้า · พร้อมจัดหน้า`, "success", 0);
@@ -2561,6 +2584,76 @@
     return `${outputName} เรียบร้อย · ${source.SheetNames.length} Sheets · ลบแถว ${formatNumber(removedRows)} · ลบคอลัมน์ ${formatNumber(removedCols)} · Trim ${formatNumber(total.trimmedCells)} เซลล์ · ต้นฉบับไม่ได้ถูกแก้ไข`;
   }
 
+  function pdfToPngOptions() {
+    return {
+      pageRange: String((els.pngPageRange && els.pngPageRange.value) || "").trim(),
+      dpi: PdfToPngOps.normalizeDpi(els.pngDpi && els.pngDpi.value),
+      transparent: !!(els.pngTransparent && els.pngTransparent.checked),
+      maxPages: Math.max(1, Math.min(500, Number(els.pngMaxPages && els.pngMaxPages.value) || 100)),
+    };
+  }
+
+  async function processPdfToPng() {
+    if (!PDFJS) throw new Error("โหลด PDF.js ไม่สำเร็จ กรุณารีเฟรชหน้าเว็บ");
+    if (!window.PdfToPngOps) throw new Error("โหลด PDF → PNG engine ไม่สำเร็จ กรุณารีเฟรชหน้าเว็บ");
+    const ref = state.parsed[0];
+    if (!ref || !ref.bytes) throw new Error("กรุณาเลือก PDF ก่อน");
+    const options = pdfToPngOptions();
+    const totalPages = ref.pdfDoc.getPageCount();
+    const selected = options.pageRange
+      ? PdfOps.parsePageRange(options.pageRange, totalPages)
+      : Array.from({ length: totalPages }, (_, i) => i);
+    const pdfjsDoc = await getPdfjsDoc(ref);
+    setStatus("กำลังตรวจขนาดหน้า...", "working", 5);
+    const sizes = [];
+    for (const index of selected) {
+      const viewport = (await pdfjsDoc.getPage(index + 1)).getViewport({ scale: 1 });
+      sizes.push({ index, width: viewport.width, height: viewport.height });
+    }
+    const plan = PdfToPngOps.planPages(sizes, options);
+    const kind = PdfToPngOps.outputKind(plan.pages.length);
+    if (kind === "zip" && !window.JSZip) throw new Error("โหลด ZIP library ไม่สำเร็จ กรุณารีเฟรชหน้าเว็บ");
+    const zip = kind === "zip" ? new JSZip() : null;
+    let singleBytes = null;
+    for (let i = 0; i < plan.pages.length; i += 1) {
+      const item = plan.pages[i];
+      setStatus(`กำลังแปลงหน้า ${item.index + 1} (${i + 1}/${plan.pages.length})...`, "working", 8 + ((i + 1) / plan.pages.length) * 82);
+      const page = await pdfjsDoc.getPage(item.index + 1);
+      const viewport = page.getViewport({ scale: item.scale });
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.max(1, Math.ceil(viewport.width));
+      canvas.height = Math.max(1, Math.ceil(viewport.height));
+      const ctx = canvas.getContext("2d", { alpha: options.transparent });
+      if (!options.transparent) {
+        ctx.save();
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.restore();
+      }
+      await page.render({ canvasContext: ctx, viewport, background: options.transparent ? "rgba(0,0,0,0)" : "#ffffff" }).promise;
+      const bytes = await canvasToBytes(canvas, "image/png");
+      canvas.width = 0;
+      canvas.height = 0;
+      if (zip) zip.file(PdfToPngOps.pageFileName(ref.name, item.index, totalPages), bytes, { binary: true });
+      else singleBytes = bytes;
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    }
+    const baseName = els.outputName.value || `${PdfOps.basename(ref.name)}_png`;
+    let blob;
+    if (zip) {
+      setStatus("กำลังสร้าง ZIP...", "working", 93);
+      blob = await zip.generateAsync({ type: "blob", compression: "STORE" });
+    } else {
+      blob = new Blob([singleBytes], { type: "image/png" });
+    }
+    const outputName = ensureExtension(baseName, kind);
+    downloadBlob(blob, outputName);
+    const notes = [];
+    if (plan.downscaledCount) notes.push(`${plan.downscaledCount} หน้าถูกลดความละเอียดอัตโนมัติ (ใหญ่เกิน limit ของ Browser)`);
+    if (options.transparent) notes.push("พื้นหลังโปร่งใส");
+    return `${outputName} เรียบร้อย · ${plan.pages.length} หน้า · ${plan.dpi} DPI${notes.length ? " · " + notes.join(" · ") : ""} · ต้นฉบับไม่ได้ถูกแก้ไข`;
+  }
+
   async function processFiles() {
     const config = currentConfig();
     const ready = state.mode === "mergePdf" || state.mode === "pdfPageTools" || state.mode === "pdfWatermark"
@@ -2591,6 +2684,7 @@
       else if (state.mode === "pdfWatermark") message = await processPdfWatermark();
       else if (state.mode === "imageToPdf") message = await processImageToPdf();
       else if (state.mode === "pdfScanCleanup") message = await processPdfScanCleanup();
+      else if (state.mode === "pdfToPng") message = await processPdfToPng();
       else if (state.mode === "batchRename") message = await processBatchRename();
       else if (state.mode === "excelCleaner") message = await processExcelCleaner();
       else if (state.mode === "mergePdf") message = await processMergePdf();

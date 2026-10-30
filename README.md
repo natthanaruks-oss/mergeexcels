@@ -1,4 +1,4 @@
-# Office Toolkit v4.6.0 — Local-first Excel, PDF & Business File Toolkit (repo: MergeExcels)
+# Office Toolkit v4.6.1 — Local-first Excel, PDF & Business File Toolkit (repo: MergeExcels)
 
 Web Application สำหรับจัดการไฟล์ Excel และ PDF แบบ **Client-side 100%**
 ไฟล์ของผู้ใช้ถูกประมวลผลในเบราว์เซอร์และไม่ถูกอัปโหลดขึ้น Application Server
@@ -142,7 +142,7 @@ Cloudflare Build Settings:
 3. ลาก **ทุกไฟล์และโฟลเดอร์ที่อยู่ข้างใน** ขึ้น Repo เดิม
 4. ต้องเห็น `public/`, `package.json`, `package-lock.json`, `wrangler.jsonc` และ `.node-version` ที่หน้า Root
 5. Commit แล้วรอ Cloudflare Deploy อัตโนมัติ
-6. เปิดเว็บและตรวจ Version Badge ต้องเป็น `v4.6.0`
+6. เปิดเว็บและตรวจ Version Badge ต้องเป็น `v4.6.1`
 
 ## Security Notes
 
@@ -194,3 +194,6 @@ Preview and rename multiple local files safely, then download renamed copies as 
 ## Office Toolkit v4.6.0 — Phase 2A
 ### Excel Cleaner
 Analyze a workbook first, then choose cleanup options. Defaults are conservative (trim spaces, remove blank rows/columns); riskier options are off by default. Removing rows/columns while leaving formulas in place is blocked, because formula references would silently shift. The original file is never modified; output is a new `.xlsx`.
+
+## Office Toolkit v4.6.1 — PDF to PNG
+แปลงหน้า PDF เป็นภาพ PNG ใน Browser: เลือกช่วงหน้า, DPI 72–300, 1 หน้าได้ PNG เดี่ยว หลายหน้าได้ ZIP และเลือกพื้นหลังโปร่งใสได้ (ค่าเริ่มต้นพื้นขาว) หน้าที่ใหญ่เกินจะถูกลดความละเอียดอัตโนมัติและแจ้งให้ทราบ ผลลัพธ์เป็นภาพ ไม่มีข้อความที่ค้นหาได้
